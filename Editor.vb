@@ -65,6 +65,7 @@ Public Class Editor
         Console.SetCursorPosition(0, r + 1)
         
         Dim currentColor As ConsoleColor = ConsoleColor.Green ' Default to Low Intensity
+        Dim isHidden As Boolean = False
         
         For c As Integer = 0 To COLS - 1
             Dim ch As Char = Buffer(r, c)
@@ -73,9 +74,14 @@ Public Class Editor
                 Console.ForegroundColor = ConsoleColor.DarkYellow ' Control char color
                 Console.Write(ch)
                 currentColor = AttrManager.GetColorForAttribute(ch)
+                isHidden = AttrManager.IsHiddenAttribute(ch)
             Else
                 Console.ForegroundColor = currentColor
-                Console.Write(ch)
+                If isHidden Then
+                    Console.Write(" "c)
+                Else
+                    Console.Write(ch)
+                End If
             End If
         Next
     End Sub

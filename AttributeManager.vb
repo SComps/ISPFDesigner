@@ -10,7 +10,14 @@ Public Class AttributeManager
         Attributes.Add("%"c, "TYPE(TEXT) INTENS(HIGH)")
         Attributes.Add("+"c, "TYPE(TEXT) INTENS(LOW)")
         Attributes.Add("_"c, "TYPE(INPUT) CAPS(ON)")
+        Attributes.Add("$"c, "TYPE(PASSWORD)")
     End Sub
+
+    Public Function IsHiddenAttribute(c As Char) As Boolean
+        If Not Attributes.ContainsKey(c) Then Return False
+        Dim def As String = Attributes(c).ToUpper()
+        Return def.Contains("TYPE(PASSWORD)") OrElse def.Contains("INTENS(NON)")
+    End Function
 
     Public Sub SetAttribute(c As Char, def As String)
         If Attributes.ContainsKey(c) Then
