@@ -1,60 +1,179 @@
 Imports System
 Imports System.Collections.Generic
+Imports System.Text.RegularExpressions
 
+''' <summary>
+''' Manages ISPF attribute definitions and provides efficient lookups for rendering.
+''' </summary>
 Public Class AttributeManager
-    ' Maps Char -> ISPF Definition String
-    Public Property Attributes As New Dictionary(Of Char, String)
+    ' Constants for attribute keywords
+    Private Const TYPE_TEXT As String = "TYPE(TEXT)"
+    Private Const TYPE_INPUT As String = "TYPE(INPUT)"
+    Private Const TYPE_PASSWORD As String = "TYPE(PASSWORD)"
+    Private Const INTENS_HIGH As String = "INTENS(HIGH)"
+    Private Const INTENS_LOW As String = "INTENS(LOW)"
+    Private Const INTENS_NON As String = "INTENS(NON)"
+    Private Const CAPS_ON As String = "CAPS(ON)"
+    
+    ' Color constants
+    Private Const COLOR_WHITE As String = "COLOR(WHITE)"
+    Private Const COLOR_RED As String = "COLOR(RED)"
+    Private Const COLOR_BLUE As String = "COLOR(BLUE)"
+    Private Const COLOR_GREEN As String = "COLOR(GREEN)"
+    Private Const COLOR_YELLOW As String = "COLOR(YELLOW)"
+    Private Const COLOR_PINK As String = "COLOR(PINK)"
+    Private Const COLOR_TURQ As String = "COLOR(TURQ)"
 
+    ''' <summary>
+    ''' Attribute type enumeration for efficient type checking.
+    ''' </summary>
+    Public Enum AttributeType
+        Text
+        Input
+        Password
+        Other
+    End Enum
+
+    ''' <summary>
+    ''' Parsed attribute definition for efficient lookups.
+    ''' </summary>
+    Private Class AttributeDefinition
+        Public Property RawDefinition As String
+        Public Property UpperDefinition As String
+        Public Property IsHidden As Boolean
+        Public Property Color As ConsoleColor
+        Public Property Type As AttributeType
+        Public Property IsInputOrPassword As Boolean
+        
+        Public Sub New(definition As String)
+            RawDefinition = definition
+            UpperDefinition = definition.ToUpper()
+            Type = ParseType()
+            IsInputOrPassword = (Type = AttributeType.Input OrElse Type = AttributeType.Password)
+            IsHidden = ParseIsHidden()
+            Color = ParseColor()
+        End Sub
+        
+        Private Function ParseType() As AttributeType
+            If UpperDefinition.Contains(TYPE_PASSWORD) Then Return AttributeType.Password
+            If UpperDefinition.Contains(TYPE_INPUT) Then Return AttributeType.Input
+            If UpperDefinition.Contains(TYPE_TEXT) Then Return AttributeType.Text
+            Return AttributeType.Other
+        End Function
+        
+        Private Function ParseIsHidden() As Boolean
+            Return Type = AttributeType.Password OrElse UpperDefinition.Contains(INTENS_NON)
+        End Function
+        
+        Private Function ParseColor() As ConsoleColor
+            ' Priority order: explicit COLOR() > intensity-based > type-based
+            If UpperDefinition.Contains(COLOR_WHITE) Then Return ConsoleColor.White
+            If UpperDefinition.Contains(COLOR_RED) Then Return ConsoleColor.Red
+            If UpperDefinition.Contains(COLOR_BLUE) Then Return ConsoleColor.Blue
+            If UpperDefinition.Contains(COLOR_GREEN) Then Return ConsoleColor.Green
+            If UpperDefinition.Contains(COLOR_YELLOW) Then Return ConsoleColor.Yellow
+            If UpperDefinition.Contains(COLOR_PINK) Then Return ConsoleColor.Magenta
+            If UpperDefinition.Contains(COLOR_TURQ) Then Return ConsoleColor.Cyan
+            
+            ' Fallback to intensity-based colors
+            If UpperDefinition.Contains(INTENS_HIGH) Then Return ConsoleColor.White
+            If UpperDefinition.Contains(INTENS_LOW) Then Return ConsoleColor.Cyan
+            If Type = AttributeType.Input Then Return ConsoleColor.Red
+            
+            Return ConsoleColor.Cyan ' Default fallback
+        End Function
+    End Class
+
+    ' Maps Char -> Parsed Attribute Definition
+    Private ReadOnly _attributes As New Dictionary(Of Char, AttributeDefinition)
+
+    ''' <summary>
+    ''' Gets the raw ISPF definition string for an attribute character.
+    ''' </summary>
+    Public ReadOnly Property Attributes As Dictionary(Of Char, String)
+        Get
+            Dim result As New Dictionary(Of Char, String)
+            For Each kvp In _attributes
+                result(kvp.Key) = kvp.Value.RawDefinition
+            Next
+            Return result
+        End Get
+    End Property
+
+    ''' <summary>
+    ''' Initializes the AttributeManager with default ISPF attributes.
+    ''' </summary>
     Public Sub New()
         ' Default Attributes
-        Attributes.Add("%"c, "TYPE(TEXT) INTENS(HIGH)")
-        Attributes.Add("+"c, "TYPE(TEXT) INTENS(LOW)")
-        Attributes.Add("_"c, "TYPE(INPUT) CAPS(ON)")
-        Attributes.Add("$"c, "TYPE(PASSWORD)")
+        SetAttribute("%"c, INTENS_HIGH & " " & TYPE_TEXT)
+        SetAttribute("+"c, INTENS_LOW & " " & TYPE_TEXT)
+        SetAttribute("_"c, TYPE_INPUT & " " & CAPS_ON)
+        SetAttribute("$"c, TYPE_PASSWORD)
     End Sub
 
+    ''' <summary>
+    ''' Determines if an attribute should be hidden (password or non-display).
+    ''' </summary>
+    ''' <param name="c">The attribute character.</param>
+    ''' <returns>True if the attribute is hidden; otherwise, false.</returns>
     Public Function IsHiddenAttribute(c As Char) As Boolean
-        If Not Attributes.ContainsKey(c) Then Return False
-        Dim def As String = Attributes(c).ToUpper()
-        Return def.Contains("TYPE(PASSWORD)") OrElse def.Contains("INTENS(NON)")
+        Dim def As AttributeDefinition = Nothing
+        If _attributes.TryGetValue(c, def) Then
+            Return def.IsHidden
+        End If
+        Return False
     End Function
 
+    ''' <summary>
+    ''' Sets or updates an attribute definition.
+    ''' </summary>
+    ''' <param name="c">The attribute character.</param>
+    ''' <param name="def">The ISPF definition string.</param>
     Public Sub SetAttribute(c As Char, def As String)
-        If Attributes.ContainsKey(c) Then
-            Attributes(c) = def
-        Else
-            Attributes.Add(c, def)
-        End If
+        _attributes(c) = New AttributeDefinition(def)
     End Sub
 
+    ''' <summary>
+    ''' Removes an attribute definition.
+    ''' </summary>
+    ''' <param name="c">The attribute character to remove.</param>
     Public Sub RemoveAttribute(c As Char)
-        If Attributes.ContainsKey(c) Then
-            Attributes.Remove(c)
-        End If
+        _attributes.Remove(c)
     End Sub
 
+    ''' <summary>
+    ''' Gets the console color for an attribute character.
+    ''' </summary>
+    ''' <param name="c">The attribute character.</param>
+    ''' <returns>The console color to use for rendering.</returns>
     Public Function GetColorForAttribute(c As Char) As ConsoleColor
-        If Not Attributes.ContainsKey(c) Then Return ConsoleColor.Gray
-
-        Dim def As String = Attributes(c).ToUpper()
-        
-        ' Note: This heuristics can be expanded
-        If def.Contains("INTENS(HIGH)") Then Return ConsoleColor.White
-        If def.Contains("INTENS(LOW)") Then Return ConsoleColor.Cyan
-        If def.Contains("TYPE(INPUT)") Then Return ConsoleColor.Red
-        
-        If def.Contains("COLOR(WHITE)") Then Return ConsoleColor.White
-        If def.Contains("COLOR(RED)") Then Return ConsoleColor.Red
-        If def.Contains("COLOR(BLUE)") Then Return ConsoleColor.Blue
-        If def.Contains("COLOR(GREEN)") Then Return ConsoleColor.Green
-        If def.Contains("COLOR(YELLOW)") Then Return ConsoleColor.Yellow
-        If def.Contains("COLOR(PINK)") Then Return ConsoleColor.Magenta
-        If def.Contains("COLOR(TURQ)") Then Return ConsoleColor.Cyan
-        
-        Return ConsoleColor.Cyan ' Default fallback
+        Dim def As AttributeDefinition = Nothing
+        If _attributes.TryGetValue(c, def) Then
+            Return def.Color
+        End If
+        Return ConsoleColor.Gray
     End Function
 
+    ''' <summary>
+    ''' Checks if a character is a defined attribute.
+    ''' </summary>
+    ''' <param name="c">The character to check.</param>
+    ''' <returns>True if the character is a defined attribute; otherwise, false.</returns>
     Public Function IsAttributeChar(c As Char) As Boolean
-        Return Attributes.ContainsKey(c)
+        Return _attributes.ContainsKey(c)
+    End Function
+
+    ''' <summary>
+    ''' Checks if an attribute character represents an input or password field.
+    ''' This is optimized for frequent calls in test mode.
+    ''' </summary>
+    ''' <param name="c">The attribute character.</param>
+    ''' <returns>True if the attribute is TYPE(INPUT) or TYPE(PASSWORD); otherwise, false.</returns>
+    Public Function IsInputOrPasswordAttribute(c As Char) As Boolean
+        Dim def As AttributeDefinition = Nothing
+        If _attributes.TryGetValue(c, def) Then
+            Return def.IsInputOrPassword
+        End If
+        Return False
     End Function
 End Class

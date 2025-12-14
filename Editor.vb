@@ -10,8 +10,16 @@ Public Class Editor
     Private CursorY As Integer = 0
     Private IsRunning As Boolean = True
     Private IsTestMode As Boolean = False
-    Private AttrManager As New AttributeManager() 
+    Private AttrManager As New AttributeManager()
+    
+    ' Track previous state to avoid redundant status bar updates
+    Private LastCursorX As Integer = -1
+    Private LastCursorY As Integer = -1
+    Private LastTestMode As Boolean = False
 
+    ''' <summary>
+    ''' Initializes a new instance of the Editor with an empty buffer.
+    ''' </summary>
     Public Sub New()
         ' Initialize buffer with spaces
         For r As Integer = 0 To ROWS - 1
@@ -33,21 +41,36 @@ Public Class Editor
 
     End Sub
 
+    ''' <summary>
+    ''' Runs the main editor loop, handling user input until exit.
+    ''' </summary>
     Public Sub Run()
+        Console.CursorVisible = False ' Hide cursor during rendering
         Console.Clear()
         RenderAll() ' Initial full draw
         
         While IsRunning
-            UpdateStatusBar()
+            ' Only update status bar if cursor position or mode changed
+            If CursorX <> LastCursorX OrElse CursorY <> LastCursorY OrElse IsTestMode <> LastTestMode Then
+                Console.CursorVisible = False
+                UpdateStatusBar()
+                LastCursorX = CursorX
+                LastCursorY = CursorY
+                LastTestMode = IsTestMode
+            End If
+            
             Console.SetCursorPosition(CursorX, CursorY + 1)
+            Console.CursorVisible = True ' Show cursor when waiting for input
             HandleInput()
         End While
         
+        Console.CursorVisible = True ' Restore cursor visibility
         Console.Clear()
         
     End Sub
 
     Private Sub RenderAll()
+        Console.CursorVisible = False
         Console.Clear()
         UpdateStatusBar()
         For r As Integer = 0 To ROWS - 1
@@ -95,6 +118,14 @@ Public Class Editor
         Next
     End Sub
 
+    ''' <summary>
+    ''' Moves the cursor by the specified delta, clamping to valid bounds.
+    ''' </summary>
+    Private Sub MoveCursor(dx As Integer, dy As Integer)
+        CursorX = Math.Max(0, Math.Min(COLS - 1, CursorX + dx))
+        CursorY = Math.Max(0, Math.Min(ROWS - 1, CursorY + dy))
+    End Sub
+
     Private Sub HandleInput()
 
 
@@ -109,16 +140,16 @@ Public Class Editor
 
         Select Case key.Key
             Case ConsoleKey.LeftArrow
-                CursorX = Math.Max(0, CursorX - 1)
+                MoveCursor(-1, 0)
             
             Case ConsoleKey.RightArrow
-                CursorX = Math.Min(COLS - 1, CursorX + 1)
+                MoveCursor(1, 0)
             
             Case ConsoleKey.UpArrow
-                CursorY = Math.Max(0, CursorY - 1)
+                MoveCursor(0, -1)
             
             Case ConsoleKey.DownArrow
-                CursorY = Math.Min(ROWS - 1, CursorY + 1)
+                MoveCursor(0, 1)
             
             Case ConsoleKey.Backspace
                 If CursorX > 0 Then
@@ -189,11 +220,10 @@ Public Class Editor
     End Sub
 
     Private Sub ShowHelp()
+        Console.CursorVisible = False
         Console.Clear()
         Console.ForegroundColor = ConsoleColor.White
         Console.WriteLine("================ ISPF DESIGNER HELP ================")
-        ' ... (Same content as before, abbreviated for brevity in this replace?) ...
-        ' Actually I should preserve the content. I'll paste the full content again to be safe.
         Console.WriteLine()
         Console.WriteLine("NAVIGATION:")
         Console.WriteLine("  Arrow Keys  : Move Cursor")
@@ -217,6 +247,7 @@ Public Class Editor
     End Sub
     
     Private Sub ShowAttributeEditor()
+        Console.CursorVisible = False
         Console.Clear()
         Console.ForegroundColor = ConsoleColor.White
         Console.WriteLine("================ ATTRIBUTE EDITOR (F4) ================")
@@ -235,6 +266,7 @@ Public Class Editor
         Console.WriteLine("Example: % DELETE")
         Console.WriteLine("Press ENTER (empty) to return.")
         Console.WriteLine("-------------------------------------------------------")
+        Console.CursorVisible = True
         
         While True
             Console.Write("> ")
@@ -299,13 +331,13 @@ Public Class Editor
                 End If
             
             Case ConsoleKey.LeftArrow
-                CursorX = Math.Max(0, CursorX - 1)
+                MoveCursor(-1, 0)
             Case ConsoleKey.RightArrow
-                CursorX = Math.Min(COLS - 1, CursorX + 1)
+                MoveCursor(1, 0)
             Case ConsoleKey.UpArrow
-                CursorY = Math.Max(0, CursorY - 1)
+                MoveCursor(0, -1)
             Case ConsoleKey.DownArrow
-                CursorY = Math.Min(ROWS - 1, CursorY + 1)
+                MoveCursor(0, 1)
                 
             Case ConsoleKey.Enter
                 JumpToNextField()
@@ -384,11 +416,7 @@ Public Class Editor
     Private Function IsStartOfInputField(r As Integer, c As Integer) As Boolean
         If c = 0 Then Return False ' If field starts at 0, attr must be at -1 (impossible)
         Dim prevChar As Char = Buffer(r, c - 1)
-        If AttrManager.IsAttributeChar(prevChar) Then
-             Dim def As String = AttrManager.Attributes(prevChar)
-             Return def.Contains("TYPE(INPUT)") OrElse def.Contains("TYPE(PASSWORD)")
-        End If
-        Return False
+        Return AttrManager.IsInputOrPasswordAttribute(prevChar)
     End Function
 
     Private Function IsInputField(r As Integer, c As Integer) As Boolean
@@ -396,8 +424,7 @@ Public Class Editor
         For i As Integer = c To 0 Step -1
             Dim ch As Char = Buffer(r, i)
             If AttrManager.IsAttributeChar(ch) Then
-                Dim def As String = AttrManager.Attributes(ch)
-                Return def.Contains("TYPE(INPUT)") OrElse def.Contains("TYPE(PASSWORD)")
+                Return AttrManager.IsInputOrPasswordAttribute(ch)
             End If
         Next
         
