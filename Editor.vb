@@ -19,13 +19,17 @@ Public Class Editor
             Next
         Next
         
+
         ' Default size
         Try
-            If Console.WindowHeight < ROWS + 2 Then Console.WindowHeight = ROWS + 2
-            If Console.WindowWidth < COLS Then Console.WindowWidth = COLS
+            If OperatingSystem.IsWindows() Then
+                If Console.WindowHeight < ROWS + 2 Then Console.WindowHeight = ROWS + 2
+                If Console.WindowWidth < COLS Then Console.WindowWidth = COLS
+            End If
         Catch
             ' Ignore resizing errors
         End Try
+
     End Sub
 
     Public Sub Run()
@@ -38,8 +42,6 @@ Public Class Editor
             HandleInput()
         End While
         
-        Console.Clear()
-        Console.WriteLine("Exited ISPF Designer.")
     End Sub
 
     Private Sub RenderAll()

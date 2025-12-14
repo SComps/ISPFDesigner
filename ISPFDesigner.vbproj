@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>ISPFDesigner</RootNamespace>
     <TargetFramework>net9.0</TargetFramework>
+    <PublishAot>true</PublishAot>
   </PropertyGroup>
 
 </Project>
