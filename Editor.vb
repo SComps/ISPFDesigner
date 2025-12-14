@@ -42,6 +42,8 @@ Public Class Editor
             HandleInput()
         End While
         
+        Console.Clear()
+        
     End Sub
 
     Private Sub RenderAll()
