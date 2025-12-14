@@ -9,6 +9,7 @@ Public Class Editor
     Private CursorX As Integer = 0
     Private CursorY As Integer = 0
     Private IsRunning As Boolean = True
+    Private IsTestMode As Boolean = False
     Private AttrManager As New AttributeManager() 
 
     Public Sub New()
@@ -59,7 +60,9 @@ Public Class Editor
         Console.SetCursorPosition(0, 0)
         Console.BackgroundColor = ConsoleColor.Blue
         Console.ForegroundColor = ConsoleColor.White
-        Console.Write($"Pos: {CursorY + 1:D2},{CursorX + 1:D2} | F1:Help | F2:Save | F3:Load | F4:Attrs | ESC:Exit".PadRight(COLS))
+        Dim modeStr As String = If(IsTestMode, "TEST MODE", "DESIGN MODE")
+        Dim status As String = $"Pos: {CursorY + 1:D2},{CursorX + 1:D2} | {modeStr} | F1:Help | F2:Save | F3:Load | F4:Attrs | F5:Test | ESC:Exit"
+        Console.Write(status.PadRight(COLS))
         Console.ResetColor()
     End Sub
 
@@ -94,6 +97,11 @@ Public Class Editor
         Dim key As ConsoleKeyInfo = Console.ReadKey(True)
         Dim needsRedraw As Boolean = False
         Dim currentRowForRedraw As Integer = CursorY
+
+        If IsTestMode Then
+             HandleTestInput(key)
+             Return
+        End If
 
         Select Case key.Key
             Case ConsoleKey.LeftArrow
@@ -140,6 +148,10 @@ Public Class Editor
 
             Case ConsoleKey.F4
                 ShowAttributeEditor()
+                RenderAll()
+            
+            Case ConsoleKey.F5
+                IsTestMode = Not IsTestMode
                 RenderAll()
 
             Case Else
@@ -267,5 +279,127 @@ Public Class Editor
              Console.ReadKey()
         End If
     End Sub
+
+
+    Private Sub HandleTestInput(key As ConsoleKeyInfo)
+         Select Case key.Key
+            Case ConsoleKey.F5
+                IsTestMode = Not IsTestMode
+                RenderAll()
+            
+            Case ConsoleKey.Tab
+                If key.Modifiers.HasFlag(ConsoleModifiers.Shift) Then
+                    JumpToPrevField()
+                Else
+                    JumpToNextField()
+                End If
+            
+            Case ConsoleKey.LeftArrow
+                CursorX = Math.Max(0, CursorX - 1)
+            Case ConsoleKey.RightArrow
+                CursorX = Math.Min(COLS - 1, CursorX + 1)
+            Case ConsoleKey.UpArrow
+                CursorY = Math.Max(0, CursorY - 1)
+            Case ConsoleKey.DownArrow
+                CursorY = Math.Min(ROWS - 1, CursorY + 1)
+                
+            Case ConsoleKey.Enter
+                JumpToNextField()
+
+            Case ConsoleKey.Backspace
+                 If IsInputField(CursorY, CursorX) AndAlso CursorX > 0 Then
+                     ' Ensure we don't delete the start attribute itself
+                     If Not AttrManager.IsAttributeChar(Buffer(CursorY, CursorX - 1)) Then
+                         CursorX -= 1
+                         Buffer(CursorY, CursorX) = " "c
+                         RenderLine(CursorY)
+                     End If
+                 End If
+
+            Case Else
+                ' Allow typing only if in input field
+                If Not Char.IsControl(key.KeyChar) Then
+                    If IsInputField(CursorY, CursorX) Then
+                        Buffer(CursorY, CursorX) = key.KeyChar
+                        RenderLine(CursorY)
+                        If CursorX < COLS - 1 Then CursorX += 1
+                    End If
+                End If
+        End Select
+    End Sub
+
+    Private Sub JumpToNextField()
+        ' Scan forward from current pos
+        Dim r As Integer = CursorY
+        Dim c As Integer = CursorX + 1
+        
+        While True
+            If c >= COLS Then
+                c = 0
+                r += 1
+                If r >= ROWS Then r = 0 ' Wrap to top
+            End If
+            
+            ' Safety break if we looped full circle (to avoid infinite loop if no fields)
+            If r = CursorY AndAlso c = CursorX Then Exit While
+            
+            If IsStartOfInputField(r, c) Then
+                CursorY = r
+                CursorX = c
+                Exit While
+            End If
+            
+            c += 1
+        End While
+    End Sub
+
+    Private Sub JumpToPrevField()
+        ' Scan backward
+        Dim r As Integer = CursorY
+        Dim c As Integer = CursorX - 1
+        
+        While True
+            If c < 0 Then
+                c = COLS - 1
+                r -= 1
+                If r < 0 Then r = ROWS - 1
+            End If
+            
+            If r = CursorY AndAlso c = CursorX Then Exit While
+            
+            If IsStartOfInputField(r, c) Then
+                 CursorY = r
+                 CursorX = c
+                 Exit While
+            End If
+            
+            c -= 1
+        End While
+    End Sub
+
+    Private Function IsStartOfInputField(r As Integer, c As Integer) As Boolean
+        If c = 0 Then Return False ' If field starts at 0, attr must be at -1 (impossible)
+        Dim prevChar As Char = Buffer(r, c - 1)
+        If AttrManager.IsAttributeChar(prevChar) Then
+             Dim def As String = AttrManager.Attributes(prevChar)
+             Return def.Contains("TYPE(INPUT)") OrElse def.Contains("TYPE(PASSWORD)")
+        End If
+        Return False
+    End Function
+
+    Private Function IsInputField(r As Integer, c As Integer) As Boolean
+        ' Scan backwards for attribute
+        For i As Integer = c To 0 Step -1
+            Dim ch As Char = Buffer(r, i)
+            If AttrManager.IsAttributeChar(ch) Then
+                Dim def As String = AttrManager.Attributes(ch)
+                Return def.Contains("TYPE(INPUT)") OrElse def.Contains("TYPE(PASSWORD)")
+            End If
+        Next
+        
+        ' If no attribute on line, check previous lines? ISPF usually line-bounded for attributes unless extended
+        ' Assuming line-bounded for now or default text
+        Return False
+    End Function
 
 End Class
