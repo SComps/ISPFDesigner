@@ -58,7 +58,11 @@ Public Class Editor
 
     Private Sub UpdateStatusBar()
         Console.SetCursorPosition(0, 0)
-        Console.BackgroundColor = ConsoleColor.Blue
+        If IsTestMode Then
+            Console.BackgroundColor = ConsoleColor.DarkRed
+        Else
+            Console.BackgroundColor = ConsoleColor.Blue
+        End If
         Console.ForegroundColor = ConsoleColor.White
         Dim modeStr As String = If(IsTestMode, "TEST MODE", "DESIGN MODE")
         Dim status As String = $"Pos: {CursorY + 1:D2},{CursorX + 1:D2} | {modeStr} | F1:Help | F2:Save | F3:Load | F4:Attrs | F5:Test | ESC:Exit"
