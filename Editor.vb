@@ -81,9 +81,7 @@ Public Class Editor
     End Sub
 
     Private Sub HandleInput()
-        If Not Console.KeyAvailable Then
-             return
-        End If
+
 
         Dim key As ConsoleKeyInfo = Console.ReadKey(True)
         Dim needsRedraw As Boolean = False
