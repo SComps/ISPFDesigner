@@ -10,9 +10,8 @@ Module Program
             ' Support loading a file on startup if provided as argument
             ' Usage: ISPFDesigner.exe myfile.panel
             If args.Length > 0 AndAlso Not String.IsNullOrWhiteSpace(args(0)) Then
-                ' Note: We'd need to expose a LoadFile method in Editor to support this
-                ' For now, just start the editor normally
-                ' Future enhancement: editor.LoadFile(args(0))
+
+                editor.LoadPanel(args(0))
             End If
             
             editor.Run()

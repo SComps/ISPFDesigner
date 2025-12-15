@@ -375,24 +375,24 @@ Public Class Editor
         End While
     End Sub
 
-    Private Sub LoadPanel()
+    Public Sub LoadPanel()
         Console.SetCursorPosition(0, ROWS + 2)
         Console.ForegroundColor = ConsoleColor.Gray
         Console.Write("Load File: ".PadRight(COLS))
         Console.SetCursorPosition(11, ROWS + 2)
         Dim filename As String = Console.ReadLine()
-        
+
         If Not String.IsNullOrWhiteSpace(filename) Then
-             Try
-                 PanelReader.ReadFromFile(filename, Buffer, ROWS, COLS, AttrManager)
-                 IsCacheDirty = True
-                 Console.SetCursorPosition(0, ROWS + 2)
-                 Console.Write("Loaded successfully! Press any key.".PadRight(COLS))
-             Catch ex As Exception
-                 Console.SetCursorPosition(0, ROWS + 2)
-                 Console.Write($"Error: {ex.Message}".PadRight(COLS))
-             End Try
-             Console.ReadKey()
+            Try
+                PanelReader.ReadFromFile(filename, Buffer, ROWS, COLS, AttrManager)
+                IsCacheDirty = True
+                Console.SetCursorPosition(0, ROWS + 2)
+                Console.Write("Loaded successfully! Press any key.".PadRight(COLS))
+            Catch ex As Exception
+                Console.SetCursorPosition(0, ROWS + 2)
+                Console.Write($"Error: {ex.Message}".PadRight(COLS))
+            End Try
+            Console.ReadKey()
         End If
     End Sub
 
