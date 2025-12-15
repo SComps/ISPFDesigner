@@ -11,7 +11,7 @@ Module Program
             ' Usage: ISPFDesigner.exe myfile.panel
             If args.Length > 0 AndAlso Not String.IsNullOrWhiteSpace(args(0)) Then
 
-                editor.LoadPanel(args(0))
+                editor.LoadFile(args(0))
             End If
             
             editor.Run()

@@ -375,7 +375,20 @@ Public Class Editor
         End While
     End Sub
 
-    Public Sub LoadPanel()
+    Public Sub LoadFile(filename As String)
+        If Not String.IsNullOrWhiteSpace(filename) Then
+            Try
+                PanelReader.ReadFromFile(filename, Buffer, ROWS, COLS, AttrManager)
+                IsCacheDirty = True
+            Catch ex As Exception
+                Console.SetCursorPosition(0, ROWS + 2)
+                Console.Write($"Error: {ex.Message}".PadRight(COLS))
+                Console.ReadKey
+            End Try
+        End If
+    End Sub
+
+    Private Sub LoadPanel()
         Console.SetCursorPosition(0, ROWS + 2)
         Console.ForegroundColor = ConsoleColor.Gray
         Console.Write("Load File: ".PadRight(COLS))
