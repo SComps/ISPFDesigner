@@ -16,6 +16,10 @@ Public Class Editor
     Private LastCursorX As Integer = -1
     Private LastCursorY As Integer = -1
     Private LastTestMode As Boolean = False
+    
+    ' Field position cache for test mode performance
+    Private FieldCache As New List(Of (Row As Integer, StartCol As Integer, EndCol As Integer))
+    Private IsCacheDirty As Boolean = True
 
     ''' <summary>
     ''' Initializes a new instance of the Editor with an empty buffer.
@@ -96,26 +100,91 @@ Public Class Editor
     Private Sub RenderLine(r As Integer)
         Console.SetCursorPosition(0, r + 1)
         
-        Dim currentColor As ConsoleColor = ConsoleColor.Green ' Default to Low Intensity
+        Dim lineBuilder As New StringBuilder(COLS)
+        Dim currentColor As ConsoleColor = ConsoleColor.Green
         Dim isHidden As Boolean = False
+        Dim lastColor As ConsoleColor = currentColor
         
         For c As Integer = 0 To COLS - 1
             Dim ch As Char = Buffer(r, c)
             
             If AttrManager.IsAttributeChar(ch) Then
-                Console.ForegroundColor = ConsoleColor.DarkYellow ' Control char color
-                Console.Write(ch)
-                currentColor = AttrManager.GetColorForAttribute(ch)
-                isHidden = AttrManager.IsHiddenAttribute(ch)
-            Else
-                Console.ForegroundColor = currentColor
-                If isHidden Then
+                ' Flush previous segment before writing attribute
+                If lineBuilder.Length > 0 Then
+                    Console.ForegroundColor = lastColor
+                    Console.Write(lineBuilder.ToString())
+                    lineBuilder.Clear()
+                End If
+                
+                ' In test mode, hide attribute chars (like production ISPF)
+                ' In design mode, show them in DarkYellow for editing
+                If IsTestMode Then
+                    Console.ForegroundColor = currentColor
                     Console.Write(" "c)
                 Else
+                    Console.ForegroundColor = ConsoleColor.DarkYellow
                     Console.Write(ch)
                 End If
+                
+                ' Update color state for following characters
+                currentColor = AttrManager.GetColorForAttribute(ch)
+                isHidden = AttrManager.IsHiddenAttribute(ch)
+                lastColor = currentColor
+            Else
+                ' If color changed, flush previous segment
+                If currentColor <> lastColor Then
+                    If lineBuilder.Length > 0 Then
+                        Console.ForegroundColor = lastColor
+                        Console.Write(lineBuilder.ToString())
+                        lineBuilder.Clear()
+                    End If
+                    lastColor = currentColor
+                End If
+                
+                ' Append character to current segment
+                lineBuilder.Append(If(isHidden, " "c, ch))
             End If
         Next
+        
+        ' Flush final segment
+        If lineBuilder.Length > 0 Then
+            Console.ForegroundColor = lastColor
+            Console.Write(lineBuilder.ToString())
+        End If
+    End Sub
+    
+    ''' <summary>
+    ''' Rebuilds the field position cache by scanning the buffer for input/password fields.
+    ''' Called when IsCacheDirty is true, typically after buffer modifications.
+    ''' </summary>
+    Private Sub RebuildFieldCache()
+        FieldCache.Clear()
+        
+        For r As Integer = 0 To ROWS - 1
+            Dim c As Integer = 0
+            While c < COLS
+                Dim ch As Char = Buffer(r, c)
+                If AttrManager.IsInputOrPasswordAttribute(ch) Then
+                    Dim startCol As Integer = c + 1
+                    Dim endCol As Integer = startCol
+                    
+                    ' Find end of field (next attribute or end of line)
+                    While endCol < COLS AndAlso Not AttrManager.IsAttributeChar(Buffer(r, endCol))
+                        endCol += 1
+                    End While
+                    
+                    If startCol < COLS Then
+                        FieldCache.Add((r, startCol, endCol - 1))
+                    End If
+                    
+                    c = endCol
+                Else
+                    c += 1
+                End If
+            End While
+        Next
+        
+        IsCacheDirty = False
     End Sub
 
     ''' <summary>
@@ -155,11 +224,13 @@ Public Class Editor
                 If CursorX > 0 Then
                     CursorX -= 1
                     Buffer(CursorY, CursorX) = " "c
+                    IsCacheDirty = True
                     RenderLine(CursorY) 
                 End If
 
             Case ConsoleKey.Delete
                 Buffer(CursorY, CursorX) = " "c
+                IsCacheDirty = True
                 RenderLine(CursorY)
 
             Case ConsoleKey.Enter
@@ -192,6 +263,7 @@ Public Class Editor
             Case Else
                 If Not Char.IsControl(key.KeyChar) Then
                     Buffer(CursorY, CursorX) = key.KeyChar
+                    IsCacheDirty = True
                     ' We must redraw the WHOLE line because if the user typed an attribute, 
                     ' it changes colors for the rest of the line.
                     RenderLine(CursorY)
@@ -254,7 +326,7 @@ Public Class Editor
         Console.WriteLine("Existing Attributes:")
         Console.WriteLine()
         
-        For Each kvp In AttrManager.Attributes
+        For Each kvp In AttrManager.GetAttributeDefinitions()
             Console.WriteLine($"  [{kvp.Key}] : {kvp.Value}")
         Next
         
@@ -306,6 +378,7 @@ Public Class Editor
         If Not String.IsNullOrWhiteSpace(filename) Then
              Try
                  PanelReader.ReadFromFile(filename, Buffer, ROWS, COLS, AttrManager)
+                 IsCacheDirty = True
                  Console.SetCursorPosition(0, ROWS + 2)
                  Console.Write("Loaded successfully! Press any key.".PadRight(COLS))
              Catch ex As Exception
@@ -346,6 +419,7 @@ Public Class Editor
                  If IsInputField(CursorY, CursorX) AndAlso CursorX > 0 Then
                      ' Ensure we don't delete the start attribute itself
                      If Not AttrManager.IsAttributeChar(Buffer(CursorY, CursorX - 1)) Then
+                         IsCacheDirty = True
                          CursorX -= 1
                          Buffer(CursorY, CursorX) = " "c
                          RenderLine(CursorY)
@@ -354,82 +428,72 @@ Public Class Editor
 
             Case Else
                 ' Allow typing only if in input field
-                If Not Char.IsControl(key.KeyChar) Then
-                    If IsInputField(CursorY, CursorX) Then
-                        Buffer(CursorY, CursorX) = key.KeyChar
-                        RenderLine(CursorY)
-                        If CursorX < COLS - 1 Then CursorX += 1
+                 If Not Char.IsControl(key.KeyChar) Then
+                     If IsInputField(CursorY, CursorX) Then
+                         Buffer(CursorY, CursorX) = key.KeyChar
+                         IsCacheDirty = True
+                         RenderLine(CursorY)
+                         If CursorX < COLS - 1 Then CursorX += 1
                     End If
                 End If
         End Select
     End Sub
 
     Private Sub JumpToNextField()
-        ' Scan forward from current pos
-        Dim r As Integer = CursorY
-        Dim c As Integer = CursorX + 1
+        If IsCacheDirty Then RebuildFieldCache()
         
-        While True
-            If c >= COLS Then
-                c = 0
-                r += 1
-                If r >= ROWS Then r = 0 ' Wrap to top
-            End If
-            
-            ' Safety break if we looped full circle (to avoid infinite loop if no fields)
-            If r = CursorY AndAlso c = CursorX Then Exit While
-            
-            If IsStartOfInputField(r, c) Then
-                CursorY = r
-                CursorX = c
-                Exit While
-            End If
-            
-            c += 1
-        End While
-    End Sub
-
-    Private Sub JumpToPrevField()
-        ' Scan backward
-        Dim r As Integer = CursorY
-        Dim c As Integer = CursorX - 1
+        If FieldCache.Count = 0 Then Return
         
-        While True
-            If c < 0 Then
-                c = COLS - 1
-                r -= 1
-                If r < 0 Then r = ROWS - 1
-            End If
-            
-            If r = CursorY AndAlso c = CursorX Then Exit While
-            
-            If IsStartOfInputField(r, c) Then
-                 CursorY = r
-                 CursorX = c
-                 Exit While
-            End If
-            
-            c -= 1
-        End While
-    End Sub
-
-    Private Function IsStartOfInputField(r As Integer, c As Integer) As Boolean
-        If c = 0 Then Return False ' If field starts at 0, attr must be at -1 (impossible)
-        Dim prevChar As Char = Buffer(r, c - 1)
-        Return AttrManager.IsInputOrPasswordAttribute(prevChar)
-    End Function
-
-    Private Function IsInputField(r As Integer, c As Integer) As Boolean
-        ' Scan backwards for attribute
-        For i As Integer = c To 0 Step -1
-            Dim ch As Char = Buffer(r, i)
-            If AttrManager.IsAttributeChar(ch) Then
-                Return AttrManager.IsInputOrPasswordAttribute(ch)
+        ' Find first field after current position
+        For Each field In FieldCache
+            If field.Row > CursorY OrElse (field.Row = CursorY AndAlso field.StartCol > CursorX) Then
+                CursorY = field.Row
+                CursorX = field.StartCol
+                Return
             End If
         Next
         
-        ' If no attribute on line, check previous lines? ISPF usually line-bounded for attributes unless extended
-        ' Assuming line-bounded for now or default text
+        ' Wrap to first field
+        If FieldCache.Count > 0 Then
+            CursorY = FieldCache(0).Row
+            CursorX = FieldCache(0).StartCol
+        End If
+    End Sub
+
+    Private Sub JumpToPrevField()
+        If IsCacheDirty Then RebuildFieldCache()
+        
+        If FieldCache.Count = 0 Then Return
+        
+        ' Find last field before current position
+        For i As Integer = FieldCache.Count - 1 To 0 Step -1
+            Dim field = FieldCache(i)
+            If field.Row < CursorY OrElse (field.Row = CursorY AndAlso field.StartCol < CursorX) Then
+                CursorY = field.Row
+                CursorX = field.StartCol
+                Return
+            End If
+        Next
+        
+        ' Wrap to last field
+        If FieldCache.Count > 0 Then
+            Dim lastField = FieldCache(FieldCache.Count - 1)
+            CursorY = lastField.Row
+            CursorX = lastField.StartCol
+        End If
+    End Sub
+
+
+
+    Private Function IsInputField(r As Integer, c As Integer) As Boolean
+        If IsCacheDirty Then RebuildFieldCache()
+        
+        For Each field In FieldCache
+            If field.Row = r AndAlso c >= field.StartCol AndAlso c <= field.EndCol Then
+                Return True
+            End If
+        Next
+        
         Return False
     End Function
 

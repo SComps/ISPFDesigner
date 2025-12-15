@@ -88,17 +88,12 @@ Public Class AttributeManager
     Private ReadOnly _attributes As New Dictionary(Of Char, AttributeDefinition)
 
     ''' <summary>
-    ''' Gets the raw ISPF definition string for an attribute character.
+    ''' Gets a read-only enumerable of attribute definitions.
+    ''' Returns key-value pairs without allocating a new dictionary.
     ''' </summary>
-    Public ReadOnly Property Attributes As Dictionary(Of Char, String)
-        Get
-            Dim result As New Dictionary(Of Char, String)
-            For Each kvp In _attributes
-                result(kvp.Key) = kvp.Value.RawDefinition
-            Next
-            Return result
-        End Get
-    End Property
+    Public Function GetAttributeDefinitions() As IEnumerable(Of KeyValuePair(Of Char, String))
+        Return _attributes.Select(Function(kvp) New KeyValuePair(Of Char, String)(kvp.Key, kvp.Value.RawDefinition))
+    End Function
 
     ''' <summary>
     ''' Initializes the AttributeManager with default ISPF attributes.
