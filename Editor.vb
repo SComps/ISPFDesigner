@@ -20,6 +20,9 @@ Public Class Editor
     ' Field position cache for test mode performance
     Private FieldCache As New List(Of (Row As Integer, StartCol As Integer, EndCol As Integer))
     Private IsCacheDirty As Boolean = True
+    
+    ' Backup buffer for test mode - restores design when exiting test mode
+    Private TestModeBackupBuffer(ROWS - 1, COLS - 1) As Char
 
     ''' <summary>
     ''' Initializes a new instance of the Editor with an empty buffer.
@@ -258,6 +261,10 @@ Public Class Editor
             
             Case ConsoleKey.F5
                 IsTestMode = Not IsTestMode
+                If IsTestMode Then
+                    ' Entering test mode - backup the current buffer
+                    Array.Copy(Buffer, TestModeBackupBuffer, Buffer.Length)
+                End If
                 RenderAll()
 
             Case Else
@@ -393,7 +400,10 @@ Public Class Editor
     Private Sub HandleTestInput(key As ConsoleKeyInfo)
          Select Case key.Key
             Case ConsoleKey.F5
+                ' Exiting test mode - restore the design buffer
+                Array.Copy(TestModeBackupBuffer, Buffer, Buffer.Length)
                 IsTestMode = Not IsTestMode
+                IsCacheDirty = True
                 RenderAll()
             
             Case ConsoleKey.Tab
@@ -412,9 +422,6 @@ Public Class Editor
             Case ConsoleKey.DownArrow
                 MoveCursor(0, 1)
                 
-            Case ConsoleKey.Enter
-                JumpToNextField()
-
             Case ConsoleKey.Backspace
                  If IsInputField(CursorY, CursorX) AndAlso CursorX > 0 Then
                      ' Ensure we don't delete the start attribute itself
