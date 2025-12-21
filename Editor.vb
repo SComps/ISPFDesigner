@@ -598,30 +598,40 @@ Namespace ISPFDesigner
 
         If Not String.IsNullOrWhiteSpace(filename) Then
             Try
-                Dim model = ProjectManager.LoadProject(filename)
-                
-                ' Restore attributes
-                For Each kvp In model.Attributes
-                    AttrManager.SetAttribute(kvp.Key(0), kvp.Value)
-                Next
-                
-                ' Restore buffer
-                For r As Integer = 0 To Math.Min(ROWS, model.Buffer.Length) - 1
-                    Dim line = model.Buffer(r)
-                    For c As Integer = 0 To Math.Min(COLS, line.Length) - 1
-                        Buffer(r, c) = line(c)
+                If filename.EndsWith(".panel", StringComparison.OrdinalIgnoreCase) Then
+                    ' Legacy Import
+                    LoadFile(filename)
+                    Console.SetCursorPosition(0, ROWS + 2)
+                    Console.Write("Panel imported successfully! Press any key.".PadRight(COLS))
+                Else
+                    ' Native Project Load
+                    If Not filename.EndsWith(".ispfd", StringComparison.OrdinalIgnoreCase) Then filename &= ".ispfd"
+                    
+                    Dim model = ProjectManager.LoadProject(filename)
+                    
+                    ' Restore attributes
+                    For Each kvp In model.Attributes
+                        AttrManager.SetAttribute(kvp.Key(0), kvp.Value)
                     Next
-                Next
-                
-                ' Restore field properties
-                FieldProperties.Clear()
-                For Each fp In model.FieldProperties
-                    FieldProperties((fp.Row, fp.Col)) = fp
-                Next
+                    
+                    ' Restore buffer
+                    For r As Integer = 0 To Math.Min(ROWS, model.Buffer.Length) - 1
+                        Dim line = model.Buffer(r)
+                        For c As Integer = 0 To Math.Min(COLS, line.Length) - 1
+                            Buffer(r, c) = line(c)
+                        Next
+                    Next
+                    
+                    ' Restore field properties
+                    FieldProperties.Clear()
+                    For Each fp In model.FieldProperties
+                        FieldProperties((fp.Row, fp.Col)) = fp
+                    Next
 
-                IsCacheDirty = True
-                Console.SetCursorPosition(0, ROWS + 2)
-                Console.Write("Project loaded successfully! Press any key.".PadRight(COLS))
+                    IsCacheDirty = True
+                    Console.SetCursorPosition(0, ROWS + 2)
+                    Console.Write("Project loaded successfully! Press any key.".PadRight(COLS))
+                End If
             Catch ex As Exception
                 Console.SetCursorPosition(0, ROWS + 2)
                 Console.Write($"Load Error: {ex.Message}".PadRight(COLS))
