@@ -28,7 +28,7 @@ Namespace ISPFDesigner
             Finally
                 ' Ensure console is properly reset on exit
                 Console.ResetColor()
-                Console.Clear()
+                If Not Console.IsOutputRedirected Then Console.Clear()
             End Try
         End Sub
     End Module

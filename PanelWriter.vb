@@ -3,15 +3,17 @@ Imports System.IO
 Namespace ISPFDesigner
     Public Class PanelWriter
         Public Shared Sub WriteToFile(filename As String, buffer(,) As Char, rows As Integer, cols As Integer, attrManager As AttributeManager, fieldProperties As Dictionary(Of (Integer, Integer), FieldProperty))
-            Using writer As New StreamWriter(filename)
-                ' Ensure CRLF line endings regardless of OS - this fixes the "one long line" issue 
-                ' for transfer tools that expect DOS-style endings.
-                writer.NewLine = vbCrLf
+            ' Explicitly use ASCII encoding to avoid BOM issues (common in UTF-8)
+            Using writer As New StreamWriter(filename, False, System.Text.Encoding.ASCII)
+                ' We use vbCrLf explicitly for cross-platform consistency.
+                ' IMPORTANT: To avoid record overflow on the mainframe (FB 80), 
+                ' we should NOT pad lines to exactly 80 characters if we are also adding 
+                ' line delimiters. The transfer tool will handle padding on the host.
                 
                 ' 1. Write Attributes
-                writer.WriteLine(")ATTR")
+                writer.Write(")ATTR" & vbCrLf)
                 For Each kvp In attrManager.GetAttributeDefinitions()
-                    writer.WriteLine($"  {kvp.Key} {kvp.Value}")
+                    writer.Write($"  {kvp.Key} {kvp.Value}".TrimEnd() & vbCrLf)
                 Next
                 
                 ' 2. Scan Body and collect Variable Meta
@@ -70,24 +72,24 @@ Namespace ISPFDesigner
                 Next
                 
                 ' 3. Write Body
-                writer.WriteLine(")BODY")
+                writer.Write(")BODY" & vbCrLf)
                 For Each bLine In bodyLines
-                    writer.WriteLine(bLine)
+                    writer.Write(bLine & vbCrLf)
                 Next
                 
                 ' 4. Write INIT (.ZVARS)
-                writer.WriteLine(")INIT")
+                writer.Write(")INIT" & vbCrLf)
                 If zVarNames.Count > 0 Then
-                    writer.WriteLine($"  .ZVARS = '({String.Join(" ", zVarNames)})'")
+                    writer.Write($"  .ZVARS = '({String.Join(" ", zVarNames)})'".TrimEnd() & vbCrLf)
                 End If
                 
                 ' 5. Write PROC
-                writer.WriteLine(")PROC")
+                writer.Write(")PROC" & vbCrLf)
                 For Each stmt In procStatements
-                    writer.WriteLine(stmt)
+                    writer.Write(stmt.TrimEnd() & vbCrLf)
                 Next
                 
-                writer.WriteLine(")END")
+                writer.Write(")END" & vbCrLf)
             End Using
         End Sub
     End Class
