@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <RootNamespace>ISPFDesigner</RootNamespace>
     <TargetFramework>net9.0</TargetFramework>
     <PublishAot>true</PublishAot>
     <PublishSingleFile>true</PublishSingleFile>

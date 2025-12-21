@@ -1,7 +1,10 @@
 Imports System
 Imports System.Text
+Imports System.Collections.Generic
+Imports System.IO
 
-Public Class Editor
+Namespace ISPFDesigner
+    Public Class Editor
     Private Const ROWS As Integer = 24
     Private Const COLS As Integer = 80
     
@@ -20,6 +23,9 @@ Public Class Editor
     ' Field position cache for test mode performance
     Private FieldCache As New List(Of (Row As Integer, StartCol As Integer, EndCol As Integer))
     Private IsCacheDirty As Boolean = True
+    
+    ' Maps (Row, Col) of the attribute character to its field properties
+    Private FieldProperties As New Dictionary(Of (Integer, Integer), FieldProperty)
     
     ' Backup buffer for test mode - restores design when exiting test mode
     Private TestModeBackupBuffer(ROWS - 1, COLS - 1) As Char
@@ -95,7 +101,7 @@ Public Class Editor
         End If
         Console.ForegroundColor = ConsoleColor.White
         Dim modeStr As String = If(IsTestMode, "TEST MODE", "DESIGN MODE")
-        Dim status As String = $"Pos: {CursorY + 1:D2},{CursorX + 1:D2} | {modeStr} | F1:Help | F2:Save | F3:Load | F4:Attrs | F5:Test | ESC:Exit"
+        Dim status As String = $"Pos: {CursorY + 1:D2},{CursorX + 1:D2} | {modeStr} | F1:Help | F2:Save(.ispfd) | F3:Load | F4:Attrs | F5:Test | F6:Field | F7:Export | ESC:Exit"
         Console.Write(status.PadRight(COLS))
         Console.ResetColor()
     End Sub
@@ -248,11 +254,11 @@ Public Class Editor
                 RenderAll() ' Restore screen after Help
 
             Case ConsoleKey.F2
-                SavePanel()
-                RenderAll() ' Restore status bar msg/screen
+                SaveProject()
+                RenderAll() 
 
             Case ConsoleKey.F3
-                LoadPanel()
+                LoadProject()
                 RenderAll()
 
             Case ConsoleKey.F4
@@ -265,6 +271,14 @@ Public Class Editor
                     ' Entering test mode - backup the current buffer
                     Array.Copy(Buffer, TestModeBackupBuffer, Buffer.Length)
                 End If
+                RenderAll()
+
+            Case ConsoleKey.F6
+                ShowFieldPropertyEditor()
+                RenderAll()
+
+            Case ConsoleKey.F7
+                ExportPanel()
                 RenderAll()
 
             Case Else
@@ -282,18 +296,70 @@ Public Class Editor
         End Select
     End Sub
 
-    Private Sub SavePanel()
+    Private Sub SaveProject()
         Console.SetCursorPosition(0, ROWS + 2)
         Console.ForegroundColor = ConsoleColor.Gray
-        Console.Write("Filename: ".PadRight(COLS))
-        Console.SetCursorPosition(10, ROWS + 2)
+        Console.Write("Save Project (.ispfd): ".PadRight(COLS))
+        Console.SetCursorPosition(23, ROWS + 2)
         
         Dim filename As String = Console.ReadLine()
+        If Not filename.EndsWith(".ispfd", StringComparison.OrdinalIgnoreCase) Then filename &= ".ispfd"
         
         If Not String.IsNullOrWhiteSpace(filename) Then
-             PanelWriter.WriteToFile(filename, Buffer, ROWS, COLS, AttrManager)
-             Console.SetCursorPosition(0, ROWS + 2)
-             Console.Write("Saved successfully! Press any key.".PadRight(COLS))
+             Try
+                 Dim model As New ProjectModel()
+                 model.Rows = ROWS
+                 model.Cols = COLS
+                 
+                 ' Convert buffer to string array
+                 Dim strBuffer(ROWS - 1) As String
+                 For r As Integer = 0 To ROWS - 1
+                     Dim sb As New StringBuilder(COLS)
+                     For c As Integer = 0 To COLS - 1
+                         sb.Append(Buffer(r, c))
+                     Next
+                     strBuffer(r) = sb.ToString()
+                 Next
+                 model.Buffer = strBuffer
+                 
+                 ' Attributes
+                 For Each kvp In AttrManager.GetAttributeDefinitions()
+                     model.Attributes(kvp.Key.ToString()) = kvp.Value
+                 Next
+                 
+                 ' Field Properties
+                 model.FieldProperties = New List(Of FieldProperty)(FieldProperties.Values)
+                 
+                 ProjectManager.SaveProject(filename, model)
+                 
+                 Console.SetCursorPosition(0, ROWS + 2)
+                 Console.Write("Project saved successfully! Press any key.".PadRight(COLS))
+             Catch ex As Exception
+                 Console.SetCursorPosition(0, ROWS + 2)
+                 Console.Write($"Save Error: {ex.Message}".PadRight(COLS))
+             End Try
+             Console.ReadKey()
+        End If
+    End Sub
+
+    Private Sub ExportPanel()
+        Console.SetCursorPosition(0, ROWS + 2)
+        Console.ForegroundColor = ConsoleColor.Gray
+        Console.Write("Export to Panel (.panel): ".PadRight(COLS))
+        Console.SetCursorPosition(26, ROWS + 2)
+        
+        Dim filename As String = Console.ReadLine()
+        If Not filename.EndsWith(".panel", StringComparison.OrdinalIgnoreCase) Then filename &= ".panel"
+        
+        If Not String.IsNullOrWhiteSpace(filename) Then
+             Try
+                 PanelWriter.WriteToFile(filename, Buffer, ROWS, COLS, AttrManager, FieldProperties)
+                 Console.SetCursorPosition(0, ROWS + 2)
+                 Console.Write("Exported successfully! Press any key.".PadRight(COLS))
+             Catch ex As Exception
+                 Console.SetCursorPosition(0, ROWS + 2)
+                 Console.Write($"Export Error: {ex.Message}".PadRight(COLS))
+             End Try
              Console.ReadKey()
         End If
     End Sub
@@ -316,8 +382,12 @@ Public Class Editor
         Console.WriteLine()
         Console.WriteLine("COMMANDS:")
         Console.WriteLine("  F1 : This Help Screen")
-        Console.WriteLine("  F2 : Save to .panel file")
-        Console.WriteLine("  F3 : Load existing .panel file")
+        Console.WriteLine("  F2 : Save PROJECT (.ispfd)")
+        Console.WriteLine("  F3 : Load PROJECT (.ispfd)")
+        Console.WriteLine("  F4 : Edit Attributes")
+        Console.WriteLine("  F5 : Test Mode (Runtime)")
+        Console.WriteLine("  F6 : Edit Field Properties")
+        Console.WriteLine("  F7 : EXPORT to ISPF Panel (.panel)")
         Console.WriteLine("  ESC: Exit Application")
         Console.WriteLine()
         Console.WriteLine("====================================================")
@@ -375,10 +445,141 @@ Public Class Editor
         End While
     End Sub
 
+    Private Sub ShowFieldPropertyEditor()
+        Dim field = FindFieldInCache(CursorY, CursorX)
+        If field.Row = -1 Then
+            Console.SetCursorPosition(0, ROWS + 2)
+            Console.ForegroundColor = ConsoleColor.Red
+            Console.Write("Error: Not in an input field. Press any key.".PadRight(COLS))
+            Console.ReadKey()
+            Return
+        End If
+
+        Dim attrCol As Integer = field.StartCol - 1
+        Dim key = (field.Row, attrCol)
+        
+        If Not FieldProperties.ContainsKey(key) Then
+            ' Initialize with defaults if not exists
+            Dim isZVar As Boolean = (Buffer(field.Row, field.StartCol) = "Z"c OrElse Buffer(field.Row, field.StartCol) = "z"c)
+            FieldProperties(key) = New FieldProperty With {
+                .Row = field.Row,
+                .Col = attrCol,
+                .Length = field.EndCol - field.StartCol + 1,
+                .Name = If(isZVar, "(placeholder)", ""),
+                .Type = "TEXT"
+            }
+        End If
+
+        Dim fp = FieldProperties(key)
+
+        Console.CursorVisible = False
+        Console.Clear()
+        Console.ForegroundColor = ConsoleColor.White
+        Console.WriteLine("================ FIELD PROPERTY EDITOR (F6) ================")
+        Console.WriteLine($"Field at Row {field.Row + 1}, Col {attrCol + 1}")
+        Console.WriteLine($"Current Content: {GetFieldContent(field)}")
+        Console.WriteLine()
+        
+        Console.WriteLine($"1. Name/Variable: {fp.Name}")
+        Console.WriteLine($"2. Length       : {fp.Length}")
+        Console.WriteLine($"3. Type         : {fp.Type}")
+        Console.WriteLine()
+        Console.WriteLine("Enter Number (1-3) to edit, or ENTER to return.")
+        Console.WriteLine("------------------------------------------------------------")
+        Console.CursorVisible = True
+
+        While True
+            Console.Write("> ")
+            Dim input As String = Console.ReadLine()
+            If String.IsNullOrWhiteSpace(input) Then Exit While
+
+            Select Case input.Trim()
+                Case "1"
+                    Console.Write("New Name: ")
+                    fp.Name = Console.ReadLine().Trim()
+                Case "2"
+                    Console.Write("New Length: ")
+                    Dim lenStr As String = Console.ReadLine()
+                    Dim newLen As Integer
+                    If Integer.TryParse(lenStr, newLen) Then fp.Length = newLen
+                Case "3"
+                    Console.Write("New Type (TEXT/ALPHA/NUM): ")
+                    fp.Type = Console.ReadLine().Trim().ToUpper()
+                Case Else
+                    Console.WriteLine("Invalid option.")
+            End Select
+            
+            ' Redraw menu (simplified)
+            Console.SetCursorPosition(0, 5)
+            Console.WriteLine($"1. Name/Variable: {fp.Name.PadRight(20)}")
+            Console.WriteLine($"2. Length       : {fp.Length.ToString().PadRight(20)}")
+            Console.WriteLine($"3. Type         : {fp.Type.PadRight(20)}")
+            Console.SetCursorPosition(0, 10)
+        End While
+    End Sub
+
+    Private Function FindFieldInCache(r As Integer, c As Integer) As (Row As Integer, StartCol As Integer, EndCol As Integer)
+        If IsCacheDirty Then RebuildFieldCache()
+        For Each field In FieldCache
+            ' Field starts at StartCol, Attribute is at StartCol-1
+            If field.Row = r AndAlso c >= field.StartCol - 1 AndAlso c <= field.EndCol Then
+                Return field
+            End If
+        Next
+        Return (-1, -1, -1)
+    End Function
+
+    Private Function GetFieldContent(field As (Row As Integer, StartCol As Integer, EndCol As Integer)) As String
+        Dim sb As New StringBuilder()
+        For c As Integer = field.StartCol To field.EndCol
+            sb.Append(Buffer(field.Row, c))
+        Next
+        Return sb.ToString()
+    End Function
+
+    ''' <summary>
+    ''' Returns a dictionary of field variable names and their current values in the buffer.
+    ''' </summary>
+    Public Function GetFieldValues() As Dictionary(Of String, String)
+        Dim result As New Dictionary(Of String, String)
+        If IsCacheDirty Then RebuildFieldCache()
+
+        ' We want to process fields in order of appearance (Top -> Bottom, Left -> Right)
+        ' FieldCache is naturally ordered because of how RebuildFieldCache works.
+        
+        Dim zVarNames As New List(Of String)
+        For Each fp In FieldProperties.Values
+             ' We need to find if this is a Z-var or regular var
+             ' Implementation detail: if user named it, we use it.
+             ' If it's a Z-placeholder, we'll handle it below.
+        Next
+
+        ' Actually, let's keep it simple: 
+        ' 1. Identify all fields in order.
+        ' 2. If a field has a defined name in FieldProperties, use that name.
+        ' 3. If a field contains 'Z' and has no name or "(placeholder)", it's a candidate for .ZVARS ordering?
+        ' NO, the user should define the order. ISPF .ZVARS is an ordered list.
+        
+        ' Revised approach for this designer:
+        ' Store ZVARS as a specific list or just use the ordered appearance of fields starting with 'Z'.
+        
+        For Each field In FieldCache
+            Dim fp As FieldProperty = Nothing
+            Dim key = (field.Row, field.StartCol - 1)
+            Dim content As String = GetFieldContent(field).Trim()
+            
+            If FieldProperties.TryGetValue(key, fp) AndAlso Not String.IsNullOrWhiteSpace(fp.Name) AndAlso fp.Name <> "(placeholder)" Then
+                result(fp.Name) = content
+            End If
+        Next
+        
+        Return result
+    End Function
+
     Public Sub LoadFile(filename As String)
         If Not String.IsNullOrWhiteSpace(filename) Then
             Try
-                PanelReader.ReadFromFile(filename, Buffer, ROWS, COLS, AttrManager)
+                PanelReader.ReadFromFile(filename, Buffer, ROWS, COLS, AttrManager, FieldProperties)
                 IsCacheDirty = True
             Catch ex As Exception
                 Console.SetCursorPosition(0, ROWS + 2)
@@ -388,22 +589,42 @@ Public Class Editor
         End If
     End Sub
 
-    Private Sub LoadPanel()
+    Private Sub LoadProject()
         Console.SetCursorPosition(0, ROWS + 2)
         Console.ForegroundColor = ConsoleColor.Gray
-        Console.Write("Load File: ".PadRight(COLS))
-        Console.SetCursorPosition(11, ROWS + 2)
+        Console.Write("Load Project: ".PadRight(COLS))
+        Console.SetCursorPosition(14, ROWS + 2)
         Dim filename As String = Console.ReadLine()
 
         If Not String.IsNullOrWhiteSpace(filename) Then
             Try
-                PanelReader.ReadFromFile(filename, Buffer, ROWS, COLS, AttrManager)
+                Dim model = ProjectManager.LoadProject(filename)
+                
+                ' Restore attributes
+                For Each kvp In model.Attributes
+                    AttrManager.SetAttribute(kvp.Key(0), kvp.Value)
+                Next
+                
+                ' Restore buffer
+                For r As Integer = 0 To Math.Min(ROWS, model.Buffer.Length) - 1
+                    Dim line = model.Buffer(r)
+                    For c As Integer = 0 To Math.Min(COLS, line.Length) - 1
+                        Buffer(r, c) = line(c)
+                    Next
+                Next
+                
+                ' Restore field properties
+                FieldProperties.Clear()
+                For Each fp In model.FieldProperties
+                    FieldProperties((fp.Row, fp.Col)) = fp
+                Next
+
                 IsCacheDirty = True
                 Console.SetCursorPosition(0, ROWS + 2)
-                Console.Write("Loaded successfully! Press any key.".PadRight(COLS))
+                Console.Write("Project loaded successfully! Press any key.".PadRight(COLS))
             Catch ex As Exception
                 Console.SetCursorPosition(0, ROWS + 2)
-                Console.Write($"Error: {ex.Message}".PadRight(COLS))
+                Console.Write($"Load Error: {ex.Message}".PadRight(COLS))
             End Try
             Console.ReadKey()
         End If
@@ -518,3 +739,4 @@ Public Class Editor
     End Function
 
 End Class
+End Namespace
