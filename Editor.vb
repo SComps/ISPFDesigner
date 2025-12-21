@@ -100,8 +100,8 @@ Namespace ISPFDesigner
             Console.BackgroundColor = ConsoleColor.Blue
         End If
         Console.ForegroundColor = ConsoleColor.White
-        Dim modeStr As String = If(IsTestMode, "TEST MODE", "DESIGN MODE")
-        Dim status As String = $"Pos: {CursorY + 1:D2},{CursorX + 1:D2} | {modeStr} | F1:Help | F2:Save(.ispfd) | F3:Load | F4:Attrs | F5:Test | F6:Field | F7:Export | ESC:Exit"
+        Dim modeStr As String = If(IsTestMode, "TEST", "DSGN")
+        Dim status As String = $"Pos:{CursorY + 1:D2},{CursorX + 1:D2} | {modeStr} | F1:Help F2:Save F3:Load F4:Attr F5:Test F6:Fld F7:Exp ESC:Exit"
         Console.Write(status.PadRight(COLS))
         Console.ResetColor()
     End Sub
