@@ -4,10 +4,18 @@ Namespace ISPFDesigner
     Public Class PanelWriter
         Public Shared Sub WriteToFile(filename As String, buffer(,) As Char, rows As Integer, cols As Integer, attrManager As AttributeManager, fieldProperties As Dictionary(Of (Integer, Integer), FieldProperty))
             Using writer As New StreamWriter(filename)
+                ' Ensure CRLF line endings regardless of OS
+                writer.NewLine = vbCrLf
+                
+                ' Helper to write a line padded to exactly 'cols'
+                Dim WritePaddedLine = Sub(text As String)
+                                         writer.WriteLine(text.PadRight(cols))
+                                     End Sub
+
                 ' 1. Write Attributes
-                writer.WriteLine(")ATTR")
+                WritePaddedLine(")ATTR")
                 For Each kvp In attrManager.GetAttributeDefinitions()
-                    writer.WriteLine($"  {kvp.Key} {kvp.Value}")
+                    WritePaddedLine($"  {kvp.Key} {kvp.Value}")
                 Next
                 
                 ' 2. Scan Body and collect Variable Meta
@@ -21,7 +29,6 @@ Namespace ISPFDesigner
                         Dim ch As Char = buffer(r, c)
                         
                         If attrManager.IsInputOrPasswordAttribute(ch) Then
-                            ' It's an input field. Determine if it's a Body Variable or Placeholder.
                             lineBuilder.Append(ch)
                             
                             Dim fieldContent As String = ""
@@ -33,23 +40,16 @@ Namespace ISPFDesigner
                             
                             Dim trimmedContent As String = fieldContent.Trim()
                             Dim varName As String = ""
-                            Dim isPlaceholder As Boolean = False
                             
-                            ' Check metadata first
                             If fieldProperties.ContainsKey((r, c)) Then
                                 varName = fieldProperties((r, c)).Name
                                 If varName = "(placeholder)" Then varName = ""
                             End If
                             
-                            ' Decision Logic:
-                            ' If it looks like a variable (starts with A-Z, @, #, $), it's a Body Variable.
-                            ' Otherwise (starts with space or 'Z'), it's a Placeholder for .ZVARS.
                             If trimmedContent.Length > 0 AndAlso Not (trimmedContent.StartsWith("Z", StringComparison.OrdinalIgnoreCase) AndAlso trimmedContent.Length = 1) Then
-                                ' Likely a Body Variable (e.g. _ADDR1)
                                 lineBuilder.Append(fieldContent)
-                                varName = trimmedContent ' Buffer takes precedence for Body Variables
+                                varName = trimmedContent
                             Else
-                                ' Placeholder (e.g. _Z or _  )
                                 If Not String.IsNullOrWhiteSpace(varName) Then
                                     zVarNames.Add(varName)
                                     lineBuilder.Append("Z".PadRight(fieldContent.Length))
@@ -58,7 +58,6 @@ Namespace ISPFDesigner
                                 End If
                             End If
                             
-                            ' Add to PROC if validation is needed
                             If Not String.IsNullOrWhiteSpace(varName) AndAlso fieldProperties.ContainsKey((r, c)) Then
                                 Dim fp = fieldProperties((r, c))
                                 If fp.Type = "NUM" OrElse fp.Type = "ALPHA" Then
@@ -71,28 +70,28 @@ Namespace ISPFDesigner
                             lineBuilder.Append(ch)
                         End If
                     Next
-                    bodyLines(r) = lineBuilder.ToString().TrimEnd()
+                    bodyLines(r) = lineBuilder.ToString() ' Already exactly 'cols' long
                 Next
                 
                 ' 3. Write Body
-                writer.WriteLine(")BODY")
+                WritePaddedLine(")BODY")
                 For Each bLine In bodyLines
-                    writer.WriteLine(bLine)
+                    WritePaddedLine(bLine)
                 Next
                 
                 ' 4. Write INIT (.ZVARS)
-                writer.WriteLine(")INIT")
+                WritePaddedLine(")INIT")
                 If zVarNames.Count > 0 Then
-                    writer.WriteLine($"  .ZVARS = '({String.Join(" ", zVarNames)})'")
+                    WritePaddedLine($"  .ZVARS = '({String.Join(" ", zVarNames)})'")
                 End If
                 
                 ' 5. Write PROC
-                writer.WriteLine(")PROC")
+                WritePaddedLine(")PROC")
                 For Each stmt In procStatements
-                    writer.WriteLine(stmt)
+                    WritePaddedLine(stmt)
                 Next
                 
-                writer.WriteLine(")END")
+                WritePaddedLine(")END")
             End Using
         End Sub
     End Class
