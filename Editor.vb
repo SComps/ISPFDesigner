@@ -590,11 +590,32 @@ Namespace ISPFDesigner
     End Sub
 
     Private Sub LoadProject()
-        Console.SetCursorPosition(0, ROWS + 2)
-        Console.ForegroundColor = ConsoleColor.Gray
-        Console.Write("Load Project: ".PadRight(COLS))
-        Console.SetCursorPosition(14, ROWS + 2)
+        Console.Clear()
+        Console.ForegroundColor = ConsoleColor.White
+        Console.WriteLine("================ LOAD PROJECT / IMPORT PANEL ================")
+        Console.WriteLine()
+        
+        Dim files As New List(Of String)
+        files.AddRange(Directory.GetFiles(".", "*.ispfd"))
+        files.AddRange(Directory.GetFiles(".", "*.panel"))
+        
+        If files.Count > 0 Then
+            Console.WriteLine("Available files in current directory:")
+            Console.WriteLine("-------------------------------------")
+            For Each f In files
+                Console.WriteLine($"  {Path.GetFileName(f)}")
+            Next
+            Console.WriteLine("-------------------------------------")
+        Else
+            Console.WriteLine("(No .ispfd or .panel files found in current directory)")
+        End If
+        
+        Console.WriteLine()
+        Console.Write("Enter filename (or ESC to cancel): ")
         Dim filename As String = Console.ReadLine()
+        
+        ' Restore screen before processing or returning
+        RenderAll()
 
         If Not String.IsNullOrWhiteSpace(filename) Then
             Try

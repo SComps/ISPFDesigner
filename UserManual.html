@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,16 +25,29 @@
             background: var(--bg);
         }
 
-        h1, h2, h3 {
+        h1,
+        h2,
+        h3 {
             color: #111827;
             margin-top: 2em;
             border-bottom: 1px solid var(--border);
             padding-bottom: 0.3em;
         }
 
-        h1 { font-size: 2.5em; border-bottom: none; margin-top: 0; }
-        h2 { font-size: 1.8em; }
-        h3 { font-size: 1.4em; border-bottom: none; }
+        h1 {
+            font-size: 2.5em;
+            border-bottom: none;
+            margin-top: 0;
+        }
+
+        h2 {
+            font-size: 1.8em;
+        }
+
+        h3 {
+            font-size: 1.4em;
+            border-bottom: none;
+        }
 
         .version {
             font-weight: bold;
@@ -74,7 +88,8 @@
             margin: 20px 0;
         }
 
-        th, td {
+        th,
+        td {
             text-align: left;
             padding: 12px;
             border-bottom: 1px solid var(--border);
@@ -102,10 +117,26 @@
         }
 
         @media print {
-            body { padding: 0; max-width: 100%; }
-            .no-print { display: none; }
-            h1, h2, h3 { page-break-after: avoid; }
-            pre, blockquote, table { page-break-inside: avoid; }
+            body {
+                padding: 0;
+                max-width: 100%;
+            }
+
+            .no-print {
+                display: none;
+            }
+
+            h1,
+            h2,
+            h3 {
+                page-break-after: avoid;
+            }
+
+            pre,
+            blockquote,
+            table {
+                page-break-inside: avoid;
+            }
         }
     </style>
     <script type="module">
@@ -113,6 +144,7 @@
         mermaid.initialize({ startOnLoad: true });
     </script>
 </head>
+
 <body>
 
     <h1>ISPF Designer: Professional User Manual</h1>
@@ -122,16 +154,22 @@
 
     <section id="introduction">
         <h2>1. Introduction</h2>
-        <p>ISPF Designer is a modern, high-performance, WYSIWYG editor designed for systems programmers and mainframe developers. It simplifies the creation of ISPF (Interactive System Productivity Facility) panels by providing a real-time, terminal-based design environment that mirrors the mainframe experience while offering the flexibility of a local development tool.</p>
-        <p>Designed with <strong>Native AOT (Ahead-of-Time)</strong> compilation in mind, ISPF Designer is a single-binary, zero-dependency application capable of running at near-instant speeds on both Windows and Linux systems.</p>
+        <p>ISPF Designer is a modern, high-performance, WYSIWYG editor designed for systems programmers and mainframe
+            developers. It simplifies the creation of ISPF (Interactive System Productivity Facility) panels by
+            providing a real-time, terminal-based design environment that mirrors the mainframe experience while
+            offering the flexibility of a local development tool.</p>
+        <p>Designed with <strong>Native AOT (Ahead-of-Time)</strong> compilation in mind, ISPF Designer is a
+            single-binary, zero-dependency application capable of running at near-instant speeds on both Windows and
+            Linux systems.</p>
     </section>
 
     <hr>
 
     <section id="architecture">
         <h2>2. Core Architecture: The Project Model</h2>
-        <p>Unlike traditional editors that embed design metadata directly into output files, ISPF Designer utilizes a <strong>Project-First Workflow</strong>.</p>
-        
+        <p>Unlike traditional editors that embed design metadata directly into output files, ISPF Designer utilizes a
+            <strong>Project-First Workflow</strong>.</p>
+
         <h3>2.1 The .ispfd Format</h3>
         <p>The <code>.ispfd</code> (ISPF Designer Project) file is the source of truth for your design. It stores:</p>
         <ul>
@@ -143,14 +181,14 @@
         <h3>2.2 Workflow Visualization</h3>
         <div class="mermaid">
             graph TD
-                A[Start Designer] --> B[Design WYSIWYG]
-                B --> C{Save Project?}
-                C -->|Yes| D[.ispfd Project File]
-                D --> E[Version Control / Local Storage]
-                E --> B
-                B --> F{Export Panel?}
-                F -->|Yes| G[.panel Standard ISPF]
-                G --> H[Upload to Mainframe]
+            A[Start Designer] --> B[Design WYSIWYG]
+            B --> C{Save Project?}
+            C -->|Yes| D[.ispfd Project File]
+            D --> E[Version Control / Local Storage]
+            E --> B
+            B --> F{Export Panel?}
+            F -->|Yes| G[.panel Standard ISPF]
+            G --> H[Upload to Mainframe]
         </div>
     </section>
 
@@ -160,13 +198,13 @@
         <h2>3. Getting Started</h2>
         <h3>3.1 Installation</h3>
         <p>ISPF Designer is distributed as a single executable. No installation is required.</p>
-        
+
         <h3>3.2 Building from Source</h3>
         <p>Requires <strong>.NET 9.0 SDK</strong>.</p>
-        
+
         <p><strong>Windows:</strong></p>
         <pre><code>dotnet publish -c Release -r win-x64 --self-contained</code></pre>
-        
+
         <p><strong>Linux (Native AOT):</strong></p>
         <pre><code>./build.sh</code></pre>
     </section>
@@ -182,7 +220,7 @@
             <li><strong>Pos</strong>: Current cursor position (Row, Column).</li>
             <li><strong>Mode</strong>: <code>DSGN</code> (Design) or <code>TEST</code> (Runtime Simulation).</li>
         </ul>
-        
+
         <h3>4.2 Coordinate System</h3>
         <p>The editor operates on a standard 24x80 grid, matching the traditional 3270 terminal display.</p>
     </section>
@@ -213,7 +251,8 @@
                 <tr>
                     <td><strong>F3</strong></td>
                     <td>Load</td>
-                    <td>Restores state from a <code>.ispfd</code> file or imports a <code>.panel</code> file.</td>
+                    <td><strong>File Browser</strong>: Lists available <code>.ispfd</code> / <code>.panel</code> files
+                        and restores state.</td>
                 </tr>
                 <tr>
                     <td><strong>F4</strong></td>
@@ -277,7 +316,8 @@
 
     <section id="exporting">
         <h2>7. Exporting to the Mainframe</h2>
-        <p>When your design is complete, press <strong>F7</strong> to export. The resulting <code>.panel</code> file uses clean, standard syntax:</p>
+        <p>When your design is complete, press <strong>F7</strong> to export. The resulting <code>.panel</code> file
+            uses clean, standard syntax:</p>
         <ul>
             <li><code>)ATTR</code>: Dynamic attribute definitions.</li>
             <li><code>)BODY</code>: Clean panel layout.</li>
@@ -291,9 +331,12 @@
     <section id="tips">
         <h2>8. Professional Tips</h2>
         <ul>
-            <li><strong>Legacy Migration</strong>: Load existing <code>.panel</code> files with F3; the designer will automatically attempt to reconstruct field properties from <code>.ZVARS</code>.</li>
-            <li><strong>Keyboard Navigation</strong>: Use <strong>Backspace</strong> and <strong>Delete</strong> for quick character manipulation; the editor automatically handles buffer updates.</li>
-            <li><strong>Linux Usage</strong>: For the best experience on Linux, ensure your terminal supports UTF-8 and 256-color output.</li>
+            <li><strong>Legacy Migration</strong>: Load existing <code>.panel</code> files with F3; the designer will
+                automatically attempt to reconstruct field properties from <code>.ZVARS</code>.</li>
+            <li><strong>Keyboard Navigation</strong>: Use <strong>Backspace</strong> and <strong>Delete</strong> for
+                quick character manipulation; the editor automatically handles buffer updates.</li>
+            <li><strong>Linux Usage</strong>: For the best experience on Linux, ensure your terminal supports UTF-8 and
+                256-color output.</li>
         </ul>
     </section>
 
@@ -301,8 +344,11 @@
 
     <div class="alert no-print">
         <div class="alert-title">💡 Pro Tip</div>
-        <p>To generate the official PDF for your release, simply press <strong>Ctrl+P</strong> (or Cmd+P) in your browser and select <strong>"Save as PDF"</strong>. The layout is already optimized for standard A4/Letter printing.</p>
+        <p>To generate the official PDF for your release, simply press <strong>Ctrl+P</strong> (or Cmd+P) in your
+            browser and select <strong>"Save as PDF"</strong>. The layout is already optimized for standard A4/Letter
+            printing.</p>
     </div>
 
 </body>
+
 </html>

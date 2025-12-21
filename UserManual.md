@@ -74,7 +74,7 @@ The editor operates on a standard 24x80 grid, matching the traditional 3270 term
 | --- | --- | --- |
 | **F1** | Help | Displays a comprehensive overlay with keyboard shortcuts. |
 | **F2** | Save | Persists the current state to a `.ispfd` source file. |
-| **F3** | Load | Restores state from a `.ispfd` file or imports a `.panel` file. |
+| **F3** | Load | **File Browser**: Lists available `.ispfd` / `.panel` files and restores state. |
 | **F4** | Attr | Opens the Attribute Manager to define custom ISPF characters. |
 | **F5** | Test | Switches to Test Mode to simulate panel runtime behavior. |
 | **F6** | Field | Configures variable properties for the field under the cursor. |
