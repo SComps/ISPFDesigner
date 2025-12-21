@@ -47,6 +47,9 @@ Namespace ISPFDesigner
             Public Property IsInputOrPassword As Boolean
             
             Public Sub New(definition As String)
+                ' Sanitize: Replace invalid TYPE(PASSWORD) with standard ISPF non-display input
+                definition = definition.Replace("TYPE(PASSWORD)", "TYPE(INPUT) INTENS(NON)", StringComparison.OrdinalIgnoreCase)
+                
                 RawDefinition = definition
                 UpperDefinition = definition.ToUpper()
                 Type = ParseType()
