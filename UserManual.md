@@ -71,7 +71,8 @@ The editor operates on a standard 24x80 grid, matching the traditional 3270 term
 ## 5. Function Key Reference
 
 | **Arrow Keys** | DSGN/TEST | Move cursor around the screen. |
-| **ENTER** | DSGN | **Quick Field Edit**: Opens properties for the field under the cursor. |
+| **ENTER** | DSGN | **Quick Field Edit**: Opens properties IF on the attribute character. Else moves to next line. |
+| **ENTER** | TEST | **Newline**: Moves cursor to the start of the next line. |
 | **F1** | Help | Displays a comprehensive overlay with keyboard shortcuts. |
 | **F2** | Save | Persists the current state to a `.ispfd` source file. |
 | **F3** | Load | **File Browser**: Lists available `.ispfd` / `.panel` files and restores state. |

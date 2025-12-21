@@ -244,10 +244,12 @@ Namespace ISPFDesigner
 
             Case ConsoleKey.Enter
                 Dim field = FindFieldInCache(CursorY, CursorX)
-                If field.Row <> -1 Then
+                ' Only open description if specifically on the attribute character
+                If field.Row <> -1 AndAlso CursorX = field.StartCol - 1 Then
                     ShowFieldPropertyEditor()
                     RenderAll()
                 Else
+                    ' Standard newline behavior
                     CursorX = 0
                     CursorY = Math.Min(ROWS - 1, CursorY + 1)
                 End If
@@ -714,7 +716,10 @@ Namespace ISPFDesigner
                 MoveCursor(0, -1)
             Case ConsoleKey.DownArrow
                 MoveCursor(0, 1)
-                
+
+            Case ConsoleKey.Enter
+                CursorX = 0
+                CursorY = Math.Min(ROWS - 1, CursorY + 1)
             Case ConsoleKey.Backspace
                  If IsInputField(CursorY, CursorX) AndAlso CursorX > 0 Then
                      ' Ensure we don't delete the start attribute itself

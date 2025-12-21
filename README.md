@@ -37,7 +37,7 @@ dotnet publish -c Release -r linux-x64 --self-contained -p:PublishAot=true
 ## Operating Instructions (Key Bindings)
 
 | **Arrow Keys** | Move cursor around the buffer |
-| **ENTER** | **Field Editor**: Open properties for the field under the cursor |
+| **ENTER** | **Field Editor**: Open properties ONLY when on the attribute character (`_`, `.`, etc.) |
 | **F1** | Show Help Screen |
 | **F2** | **Save Project**: Persists design state to a `.ispfd` file |
 | **F3** | **Load Project**: Restores design state from a `.ispfd` file |
