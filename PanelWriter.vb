@@ -42,20 +42,30 @@ Namespace ISPFDesigner
                         Dim trimmedContent As String = fieldContent.Trim()
                         Dim varName As String = ""
                         
+                        ' Priority 1: Get name from field properties (F6 editor)
                         If fieldProperties.ContainsKey((r, c)) Then
                             varName = fieldProperties((r, c)).Name
                             If varName = "(placeholder)" Then varName = ""
                         End If
                         
+                        ' Priority 2: In-buffer name (if user typed directly in body)
                         If trimmedContent.Length > 0 AndAlso Not (trimmedContent.StartsWith("Z", StringComparison.OrdinalIgnoreCase) AndAlso trimmedContent.Length = 1) Then
                             lineBuilder.Append(fieldContent)
-                            varName = trimmedContent
+                            varName = trimmedContent ' Buffer name wins
                         Else
-                            If Not String.IsNullOrWhiteSpace(varName) Then
-                                zVarNames.Add(varName)
+                            ' Priority 3: Auto-generate if still empty to avoid ISPP127
+                            If String.IsNullOrWhiteSpace(varName) Then
+                                varName = $"F{r + 1:D2}{c + 1:D2}"
+                            End If
+                            
+                            ' Every "Z" field must be in .ZVARS
+                            zVarNames.Add(varName)
+                            
+                            ' Pad the "Z" to maintain layout
+                            If fieldContent.Length > 0 Then
                                 lineBuilder.Append("Z".PadRight(fieldContent.Length))
                             Else
-                                lineBuilder.Append(fieldContent)
+                                lineBuilder.Append("Z"c)
                             End If
                         End If
                         
