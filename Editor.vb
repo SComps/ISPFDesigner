@@ -304,13 +304,52 @@ Namespace ISPFDesigner
         End Select
     End Sub
 
+    ''' <summary>
+    ''' Reads input from the console with support for ESC to cancel.
+    ''' Returns the input string, or Nothing if canceled.
+    ''' </summary>
+    Private Function ReadInputWithCancel(Optional prompt As String = "", Optional defaultValue As String = "") As String
+        If Not String.IsNullOrEmpty(prompt) Then Console.Write(prompt)
+        
+        Dim input As New StringBuilder(defaultValue)
+        If Not String.IsNullOrEmpty(defaultValue) Then Console.Write(defaultValue)
+        
+        While True
+            If Not Console.KeyAvailable Then
+                System.Threading.Thread.Sleep(50)
+                Continue While
+            End If
+
+            Dim key = Console.ReadKey(True)
+            
+            If key.Key = ConsoleKey.Escape Then
+                Return Nothing
+            ElseIf key.Key = ConsoleKey.Enter Then
+                Console.WriteLine()
+                Return input.ToString()
+            ElseIf key.Key = ConsoleKey.Backspace Then
+                If input.Length > 0 Then
+                    input.Remove(input.Length - 1, 1)
+                    Console.Write(vbBack & " " & vbBack)
+                End If
+            ElseIf Not Char.IsControl(key.KeyChar) Then
+                input.Append(key.KeyChar)
+                Console.Write(key.KeyChar)
+            End If
+        End While
+    End Function
+
     Private Sub SaveProject()
         Console.SetCursorPosition(0, ROWS + 2)
         Console.ForegroundColor = ConsoleColor.Gray
         Console.Write("Save Project (.ispfd): ".PadRight(COLS))
         Console.SetCursorPosition(23, ROWS + 2)
         
-        Dim filename As String = Console.ReadLine()
+        Dim filename As String = ReadInputWithCancel()
+        If filename Is Nothing Then Return ' Canceled
+        
+        filename = filename.Trim()
+        If String.IsNullOrWhiteSpace(filename) Then Return
         If Not filename.EndsWith(".ispfd", StringComparison.OrdinalIgnoreCase) Then filename &= ".ispfd"
         
         If Not String.IsNullOrWhiteSpace(filename) Then
@@ -356,7 +395,11 @@ Namespace ISPFDesigner
         Console.Write("Export to Panel (.panel): ".PadRight(COLS))
         Console.SetCursorPosition(26, ROWS + 2)
         
-        Dim filename As String = Console.ReadLine()
+        Dim filename As String = ReadInputWithCancel()
+        If filename Is Nothing Then Return ' Canceled
+        
+        filename = filename.Trim()
+        If String.IsNullOrWhiteSpace(filename) Then Return
         If Not filename.EndsWith(".panel", StringComparison.OrdinalIgnoreCase) Then filename &= ".panel"
         
         If Not String.IsNullOrWhiteSpace(filename) Then
@@ -426,10 +469,9 @@ Namespace ISPFDesigner
         Console.CursorVisible = True
         
         While True
-            Console.Write("> ")
-            Dim input As String = Console.ReadLine()
+            Dim input As String = ReadInputWithCancel("> ")
             
-            If String.IsNullOrWhiteSpace(input) Then Exit While
+            If input Is Nothing OrElse String.IsNullOrWhiteSpace(input) Then Exit While
             
             Dim parts As String() = input.Split(" "c, 2)
             If parts.Length > 0 AndAlso parts(0).Length = 1 Then
@@ -499,31 +541,33 @@ Namespace ISPFDesigner
             Console.WriteLine("Enter Number (1-3) to edit, or ENTER to return.".PadRight(COLS))
             Console.WriteLine("------------------------------------------------------------".PadRight(COLS))
             
-            Console.SetCursorPosition(0, 11)
+            Console.SetCursorPosition(0, 11) ' Position for the prompt
             Console.Write("> ".PadRight(COLS))
-            Console.SetCursorPosition(2, 11)
+            Console.SetCursorPosition(2, 11) ' Position for input after prompt
             
-            Dim input As String = Console.ReadLine()
-            If String.IsNullOrWhiteSpace(input) Then Exit While
+            Dim input As String = ReadInputWithCancel()
+            If input Is Nothing OrElse String.IsNullOrWhiteSpace(input) Then Exit While
 
             Select Case input.Trim()
                 Case "1"
                     Console.SetCursorPosition(0, 12)
                     Console.Write("New Name: ".PadRight(COLS))
                     Console.SetCursorPosition(10, 12)
-                    fp.Name = Console.ReadLine().Trim()
+                    Dim newName = ReadInputWithCancel()
+                    If newName IsNot Nothing Then fp.Name = newName.Trim()
                 Case "2"
                     Console.SetCursorPosition(0, 12)
                     Console.Write("New Length: ".PadRight(COLS))
                     Console.SetCursorPosition(12, 12)
-                    Dim lenStr As String = Console.ReadLine()
+                    Dim lenStr As String = ReadInputWithCancel()
                     Dim newLen As Integer
-                    If Integer.TryParse(lenStr, newLen) Then fp.Length = newLen
+                    If lenStr IsNot Nothing AndAlso Integer.TryParse(lenStr, newLen) Then fp.Length = newLen
                 Case "3"
                     Console.SetCursorPosition(0, 12)
                     Console.Write("New Type (TEXT/ALPHA/NUM): ".PadRight(COLS))
                     Console.SetCursorPosition(27, 12)
-                    fp.Type = Console.ReadLine().Trim().ToUpper()
+                    Dim newType = ReadInputWithCancel()
+                    If newType IsNot Nothing Then fp.Type = newType.Trim().ToUpper()
                 Case Else
                     Console.SetCursorPosition(0, 12)
                     Console.Write("Invalid option. Press any key.".PadRight(COLS))
@@ -632,12 +676,13 @@ Namespace ISPFDesigner
         
         Console.WriteLine()
         Console.Write("Enter filename (or ESC to cancel): ")
-        Dim filename As String = Console.ReadLine().Trim()
+        Dim filename As String = ReadInputWithCancel()
         
         ' Restore screen before processing or returning
         RenderAll()
 
-        If Not String.IsNullOrWhiteSpace(filename) Then
+        If filename Is Nothing Then Return ' Canceled
+        filename = filename.Trim()
             ' Smart extension detection
             If Not File.Exists(filename) Then
                 If File.Exists(filename & ".ispfd") Then
@@ -688,7 +733,6 @@ Namespace ISPFDesigner
                 Console.Write($"Load Error: {ex.Message}".PadRight(COLS))
             End Try
             Console.ReadKey()
-        End If
     End Sub
 
 
