@@ -337,6 +337,7 @@ Namespace ISPFDesigner
                 Console.Write(key.KeyChar)
             End If
         End While
+        Return Nothing ' Satisfy compiler
     End Function
 
     Private Sub SaveProject()

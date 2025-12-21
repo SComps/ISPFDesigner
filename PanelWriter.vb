@@ -5,12 +5,12 @@ Namespace ISPFDesigner
         Public Shared Sub WriteToFile(filename As String, buffer(,) As Char, rows As Integer, cols As Integer, attrManager As AttributeManager, fieldProperties As Dictionary(Of (Integer, Integer), FieldProperty))
             Dim allBytes As New List(Of Byte)()
             Dim encoding As System.Text.Encoding = System.Text.Encoding.ASCII
-            Dim lf As Byte() = {10} ' Use only LF to avoid "extra 0D" issues on some transfer tools
+            Dim crlf As Byte() = {13, 10} ' CRLF is mandatory for Vista TN3270 to recognize line boundaries
 
             ' Helper to add a line to the byte list
             Dim AddLine As Action(Of String) = Sub(text)
                 allBytes.AddRange(encoding.GetBytes(text))
-                allBytes.AddRange(lf)
+                allBytes.AddRange(crlf)
             End Sub
 
             ' 1. Write Attributes
