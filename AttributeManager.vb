@@ -10,7 +10,7 @@ Namespace ISPFDesigner
         ' Constants for attribute keywords
         Private Const TYPE_TEXT As String = "TYPE(TEXT)"
         Private Const TYPE_INPUT As String = "TYPE(INPUT)"
-        Private Const TYPE_PASSWORD As String = "TYPE(PASSWORD)"
+        Private Const TYPE_NON_DISPLAY As String = "TYPE(INPUT) INTENS(NON)"
         Private Const INTENS_HIGH As String = "INTENS(HIGH)"
         Private Const INTENS_LOW As String = "INTENS(LOW)"
         Private Const INTENS_NON As String = "INTENS(NON)"
@@ -56,7 +56,7 @@ Namespace ISPFDesigner
             End Sub
             
             Private Function ParseType() As AttributeType
-                If UpperDefinition.Contains(TYPE_PASSWORD) Then Return AttributeType.Password
+                If UpperDefinition.Contains("INTENS(NON)") Then Return AttributeType.Password
                 If UpperDefinition.Contains(TYPE_INPUT) Then Return AttributeType.Input
                 If UpperDefinition.Contains(TYPE_TEXT) Then Return AttributeType.Text
                 Return AttributeType.Other
@@ -104,7 +104,7 @@ Namespace ISPFDesigner
             SetAttribute("%"c, INTENS_HIGH & " " & TYPE_TEXT)
             SetAttribute("+"c, INTENS_LOW & " " & TYPE_TEXT)
             SetAttribute("_"c, TYPE_INPUT & " " & CAPS_ON)
-            SetAttribute("$"c, TYPE_PASSWORD)
+            SetAttribute("$"c, TYPE_NON_DISPLAY)
         End Sub
 
         ''' <summary>
