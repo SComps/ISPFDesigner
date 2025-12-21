@@ -612,12 +612,24 @@ Namespace ISPFDesigner
         
         Console.WriteLine()
         Console.Write("Enter filename (or ESC to cancel): ")
-        Dim filename As String = Console.ReadLine()
+        Dim filename As String = Console.ReadLine().Trim()
         
         ' Restore screen before processing or returning
         RenderAll()
 
         If Not String.IsNullOrWhiteSpace(filename) Then
+            ' Smart extension detection
+            If Not File.Exists(filename) Then
+                If File.Exists(filename & ".ispfd") Then
+                    filename &= ".ispfd"
+                ElseIf File.Exists(filename & ".panel") Then
+                    filename &= ".panel"
+                ElseIf Not filename.Contains(".") Then
+                    ' Default to .ispfd if no dots and neither exists (to show clear error)
+                    filename &= ".ispfd"
+                End If
+            End If
+
             Try
                 If filename.EndsWith(".panel", StringComparison.OrdinalIgnoreCase) Then
                     ' Legacy Import
@@ -626,8 +638,6 @@ Namespace ISPFDesigner
                     Console.Write("Panel imported successfully! Press any key.".PadRight(COLS))
                 Else
                     ' Native Project Load
-                    If Not filename.EndsWith(".ispfd", StringComparison.OrdinalIgnoreCase) Then filename &= ".ispfd"
-                    
                     Dim model = ProjectManager.LoadProject(filename)
                     
                     ' Restore attributes
