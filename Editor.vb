@@ -243,8 +243,14 @@ Namespace ISPFDesigner
                 RenderLine(CursorY)
 
             Case ConsoleKey.Enter
-                CursorX = 0
-                CursorY = Math.Min(ROWS - 1, CursorY + 1)
+                Dim field = FindFieldInCache(CursorY, CursorX)
+                If field.Row <> -1 Then
+                    ShowFieldPropertyEditor()
+                    RenderAll()
+                Else
+                    CursorX = 0
+                    CursorY = Math.Min(ROWS - 1, CursorY + 1)
+                End If
 
             Case ConsoleKey.Escape
                 IsRunning = False
@@ -477,44 +483,56 @@ Namespace ISPFDesigner
         Console.ForegroundColor = ConsoleColor.White
         Console.WriteLine("================ FIELD PROPERTY EDITOR (F6) ================")
         Console.WriteLine($"Field at Row {field.Row + 1}, Col {attrCol + 1}")
-        Console.WriteLine($"Current Content: {GetFieldContent(field)}")
+        Console.WriteLine($"Current Content: {If(GetFieldContent(field).Length > 60, GetFieldContent(field).Substring(0, 57) & "...", GetFieldContent(field))}")
         Console.WriteLine()
-        
-        Console.WriteLine($"1. Name/Variable: {fp.Name}")
-        Console.WriteLine($"2. Length       : {fp.Length}")
-        Console.WriteLine($"3. Type         : {fp.Type}")
-        Console.WriteLine()
-        Console.WriteLine("Enter Number (1-3) to edit, or ENTER to return.")
-        Console.WriteLine("------------------------------------------------------------")
         Console.CursorVisible = True
 
         While True
-            Console.Write("> ")
+            ' Redraw menu with padding to clear old text
+            Console.SetCursorPosition(0, 5)
+            Console.WriteLine($"1. Name/Variable: {fp.Name.PadRight(40)}")
+            Console.WriteLine($"2. Length       : {fp.Length.ToString().PadRight(40)}")
+            Console.WriteLine($"3. Type         : {fp.Type.PadRight(40)}")
+            Console.WriteLine()
+            Console.WriteLine("Enter Number (1-3) to edit, or ENTER to return.".PadRight(COLS))
+            Console.WriteLine("------------------------------------------------------------".PadRight(COLS))
+            
+            Console.SetCursorPosition(0, 11)
+            Console.Write("> ".PadRight(COLS))
+            Console.SetCursorPosition(2, 11)
+            
             Dim input As String = Console.ReadLine()
             If String.IsNullOrWhiteSpace(input) Then Exit While
 
             Select Case input.Trim()
                 Case "1"
-                    Console.Write("New Name: ")
+                    Console.SetCursorPosition(0, 12)
+                    Console.Write("New Name: ".PadRight(COLS))
+                    Console.SetCursorPosition(10, 12)
                     fp.Name = Console.ReadLine().Trim()
                 Case "2"
-                    Console.Write("New Length: ")
+                    Console.SetCursorPosition(0, 12)
+                    Console.Write("New Length: ".PadRight(COLS))
+                    Console.SetCursorPosition(12, 12)
                     Dim lenStr As String = Console.ReadLine()
                     Dim newLen As Integer
                     If Integer.TryParse(lenStr, newLen) Then fp.Length = newLen
                 Case "3"
-                    Console.Write("New Type (TEXT/ALPHA/NUM): ")
+                    Console.SetCursorPosition(0, 12)
+                    Console.Write("New Type (TEXT/ALPHA/NUM): ".PadRight(COLS))
+                    Console.SetCursorPosition(27, 12)
                     fp.Type = Console.ReadLine().Trim().ToUpper()
                 Case Else
-                    Console.WriteLine("Invalid option.")
+                    Console.SetCursorPosition(0, 12)
+                    Console.Write("Invalid option. Press any key.".PadRight(COLS))
+                    Console.ReadKey()
             End Select
             
-            ' Redraw menu (simplified)
-            Console.SetCursorPosition(0, 5)
-            Console.WriteLine($"1. Name/Variable: {fp.Name.PadRight(20)}")
-            Console.WriteLine($"2. Length       : {fp.Length.ToString().PadRight(20)}")
-            Console.WriteLine($"3. Type         : {fp.Type.PadRight(20)}")
-            Console.SetCursorPosition(0, 10)
+            ' Clear the prompt/input area for next iteration
+            Console.SetCursorPosition(0, 11)
+            Console.Write(" ".PadRight(COLS))
+            Console.SetCursorPosition(0, 12)
+            Console.Write(" ".PadRight(COLS))
         End While
     End Sub
 
