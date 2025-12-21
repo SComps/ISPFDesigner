@@ -380,12 +380,11 @@ Namespace ISPFDesigner
                  ProjectManager.SaveProject(filename, model)
                  
                  Console.SetCursorPosition(0, ROWS + 2)
-                 Console.Write("Project saved successfully! Press any key.".PadRight(COLS))
+                 Console.Write("Project saved successfully!".PadRight(COLS))
              Catch ex As Exception
                  Console.SetCursorPosition(0, ROWS + 2)
                  Console.Write($"Save Error: {ex.Message}".PadRight(COLS))
              End Try
-             Console.ReadKey()
         End If
     End Sub
 
@@ -406,12 +405,11 @@ Namespace ISPFDesigner
              Try
                  PanelWriter.WriteToFile(filename, Buffer, ROWS, COLS, AttrManager, FieldProperties)
                  Console.SetCursorPosition(0, ROWS + 2)
-                 Console.Write("Exported successfully! Press any key.".PadRight(COLS))
+                 Console.Write("Exported successfully!".PadRight(COLS))
              Catch ex As Exception
                  Console.SetCursorPosition(0, ROWS + 2)
                  Console.Write($"Export Error: {ex.Message}".PadRight(COLS))
              End Try
-             Console.ReadKey()
         End If
     End Sub
 
@@ -700,7 +698,7 @@ Namespace ISPFDesigner
                     ' Legacy Import
                     LoadFile(filename)
                     Console.SetCursorPosition(0, ROWS + 2)
-                    Console.Write("Panel imported successfully! Press any key.".PadRight(COLS))
+                    Console.Write("Panel imported successfully!".PadRight(COLS))
                 Else
                     ' Native Project Load
                     Dim model = ProjectManager.LoadProject(filename)
@@ -726,14 +724,13 @@ Namespace ISPFDesigner
 
                     IsCacheDirty = True
                     Console.SetCursorPosition(0, ROWS + 2)
-                    Console.Write("Project loaded successfully! Press any key.".PadRight(COLS))
+                    Console.Write("Project loaded successfully!".PadRight(COLS))
                 End If
             Catch ex As Exception
                 Console.SetCursorPosition(0, ROWS + 2)
                 Console.Write($"Load Error: {ex.Message}".PadRight(COLS))
             End Try
-            Console.ReadKey()
-    End Sub
+        End Sub
 
 
     Private Sub HandleTestInput(key As ConsoleKeyInfo)
