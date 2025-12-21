@@ -553,7 +553,30 @@ Namespace ISPFDesigner
                     Console.Write("New Name: ".PadRight(COLS))
                     Console.SetCursorPosition(10, 12)
                     Dim newName = ReadInputWithCancel()
-                    If newName IsNot Nothing Then fp.Name = newName.Trim()
+                    If newName IsNot Nothing Then
+                        Dim nameToCheck = newName.Trim()
+                        If Not String.IsNullOrWhiteSpace(nameToCheck) AndAlso nameToCheck <> "(placeholder)" Then
+                            Dim isDuplicate As Boolean = False
+                            For Each otherFp In FieldProperties.Values
+                                If otherFp IsNot fp AndAlso otherFp.Name.Equals(nameToCheck, StringComparison.OrdinalIgnoreCase) Then
+                                    isDuplicate = True
+                                    Exit For
+                                End If
+                            Next
+                            
+                            If isDuplicate Then
+                                Console.SetCursorPosition(0, 12)
+                                Console.ForegroundColor = ConsoleColor.Red
+                                Console.Write($"Error: Name '{nameToCheck}' already exists. Press any key.".PadRight(COLS))
+                                Console.ForegroundColor = ConsoleColor.White
+                                Console.ReadKey()
+                            Else
+                                fp.Name = nameToCheck
+                            End If
+                        Else
+                            fp.Name = nameToCheck
+                        End If
+                    End If
                 Case "2"
                     Console.SetCursorPosition(0, 12)
                     Console.Write("New Length: ".PadRight(COLS))
