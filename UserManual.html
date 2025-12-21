@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISPF Designer: Professional User Manual</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --text: #1f2937;
+            --bg: #ffffff;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --code-bg: #f3f4f6;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: var(--bg);
+        }
+
+        h1, h2, h3 {
+            color: #111827;
+            margin-top: 2em;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.3em;
+        }
+
+        h1 { font-size: 2.5em; border-bottom: none; margin-top: 0; }
+        h2 { font-size: 1.8em; }
+        h3 { font-size: 1.4em; border-bottom: none; }
+
+        .version {
+            font-weight: bold;
+            color: var(--muted);
+            margin-bottom: 40px;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid var(--border);
+            margin: 40px 0;
+        }
+
+        code {
+            background: var(--code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: var(--code-bg);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--border);
+        }
+
+        pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+        }
+
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid var(--primary);
+            background: #eff6ff;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @media print {
+            body { padding: 0; max-width: 100%; }
+            .no-print { display: none; }
+            h1, h2, h3 { page-break-after: avoid; }
+            pre, blockquote, table { page-break-inside: avoid; }
+        }
+    </style>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</head>
+<body>
+
+    <h1>ISPF Designer: Professional User Manual</h1>
+    <div class="version">Version 1.0 (2025)</div>
+
+    <hr>
+
+    <section id="introduction">
+        <h2>1. Introduction</h2>
+        <p>ISPF Designer is a modern, high-performance, WYSIWYG editor designed for systems programmers and mainframe developers. It simplifies the creation of ISPF (Interactive System Productivity Facility) panels by providing a real-time, terminal-based design environment that mirrors the mainframe experience while offering the flexibility of a local development tool.</p>
+        <p>Designed with <strong>Native AOT (Ahead-of-Time)</strong> compilation in mind, ISPF Designer is a single-binary, zero-dependency application capable of running at near-instant speeds on both Windows and Linux systems.</p>
+    </section>
+
+    <hr>
+
+    <section id="architecture">
+        <h2>2. Core Architecture: The Project Model</h2>
+        <p>Unlike traditional editors that embed design metadata directly into output files, ISPF Designer utilizes a <strong>Project-First Workflow</strong>.</p>
+        
+        <h3>2.1 The .ispfd Format</h3>
+        <p>The <code>.ispfd</code> (ISPF Designer Project) file is the source of truth for your design. It stores:</p>
+        <ul>
+            <li><strong>WYSIWYG Buffer</strong>: The visual layout of your panel.</li>
+            <li><strong>Dynamic Attributes</strong>: Custom attribute definitions (F4).</li>
+            <li><strong>Extended Field Metadata</strong>: Variable names, lengths, and data types (F6).</li>
+        </ul>
+
+        <h3>2.2 Workflow Visualization</h3>
+        <div class="mermaid">
+            graph TD
+                A[Start Designer] --> B[Design WYSIWYG]
+                B --> C{Save Project?}
+                C -->|Yes| D[.ispfd Project File]
+                D --> E[Version Control / Local Storage]
+                E --> B
+                B --> F{Export Panel?}
+                F -->|Yes| G[.panel Standard ISPF]
+                G --> H[Upload to Mainframe]
+        </div>
+    </section>
+
+    <hr>
+
+    <section id="getting-started">
+        <h2>3. Getting Started</h2>
+        <h3>3.1 Installation</h3>
+        <p>ISPF Designer is distributed as a single executable. No installation is required.</p>
+        
+        <h3>3.2 Building from Source</h3>
+        <p>Requires <strong>.NET 9.0 SDK</strong>.</p>
+        
+        <p><strong>Windows:</strong></p>
+        <pre><code>dotnet publish -c Release -r win-x64 --self-contained</code></pre>
+        
+        <p><strong>Linux (Native AOT):</strong></p>
+        <pre><code>./build.sh</code></pre>
+    </section>
+
+    <hr>
+
+    <section id="interface">
+        <h2>4. The Designer Interface</h2>
+        <h3>4.1 The Status Bar</h3>
+        <p>The top line provides real-time information:</p>
+        <pre><code>Pos: 01,01 | DSGN | F1:Help F2:Save F3:Load F4:Attr F5:Test F6:Fld F7:Exp ESC:Exit</code></pre>
+        <ul>
+            <li><strong>Pos</strong>: Current cursor position (Row, Column).</li>
+            <li><strong>Mode</strong>: <code>DSGN</code> (Design) or <code>TEST</code> (Runtime Simulation).</li>
+        </ul>
+        
+        <h3>4.2 Coordinate System</h3>
+        <p>The editor operates on a standard 24x80 grid, matching the traditional 3270 terminal display.</p>
+    </section>
+
+    <hr>
+
+    <section id="function-keys">
+        <h2>5. Function Key Reference</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Key</th>
+                    <th>Mode</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>F1</strong></td>
+                    <td>Help</td>
+                    <td>Displays a comprehensive overlay with keyboard shortcuts.</td>
+                </tr>
+                <tr>
+                    <td><strong>F2</strong></td>
+                    <td>Save</td>
+                    <td>Persists the current state to a <code>.ispfd</code> source file.</td>
+                </tr>
+                <tr>
+                    <td><strong>F3</strong></td>
+                    <td>Load</td>
+                    <td>Restores state from a <code>.ispfd</code> file or imports a <code>.panel</code> file.</td>
+                </tr>
+                <tr>
+                    <td><strong>F4</strong></td>
+                    <td>Attr</td>
+                    <td>Opens the Attribute Manager to define custom ISPF characters.</td>
+                </tr>
+                <tr>
+                    <td><strong>F5</strong></td>
+                    <td>Test</td>
+                    <td>Switches to Test Mode to simulate panel runtime behavior.</td>
+                </tr>
+                <tr>
+                    <td><strong>F6</strong></td>
+                    <td>Field</td>
+                    <td>Configures variable properties for the field under the cursor.</td>
+                </tr>
+                <tr>
+                    <td><strong>F7</strong></td>
+                    <td>Export</td>
+                    <td>Generates a clean, deployable <code>.panel</code> file.</td>
+                </tr>
+                <tr>
+                    <td><strong>ESC</strong></td>
+                    <td>Exit</td>
+                    <td>Safely closes the application.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <hr>
+
+    <section id="advanced">
+        <h2>6. Advanced Design Features</h2>
+        <h3>6.1 Custom Attributes (F4)</h3>
+        <p>Define how your panel looks and behaves.</p>
+        <ul>
+            <li><strong>TYPE</strong>: TEXT (protected) or INPUT/PASSWORD (unprotected).</li>
+            <li><strong>COLOR</strong>: White, Red, Blue, Green, Yellow, Pink, Turq.</li>
+            <li><strong>INTENS</strong>: HIGH, LOW, or NON (invisible).</li>
+        </ul>
+
+        <h3>6.2 Field Management (F6)</h3>
+        <p>When the cursor is on an input field (e.g., following a <code>_</code>), press <strong>F6</strong> to:</p>
+        <ol>
+            <li><strong>Assign Name</strong>: Set the Z-variable or application variable name.</li>
+            <li><strong>Set Length</strong>: Define the visual length of the field.</li>
+            <li><strong>Validate Type</strong>: Set ALPHA, NUM, or TEXT validation.</li>
+        </ol>
+
+        <h3>6.3 Test Mode (F5)</h3>
+        <p>Validate your layout before exporting. In Test Mode:</p>
+        <ul>
+            <li>Input fields become interactive.</li>
+            <li>Hidden attributes (PASSWORDS) are masked.</li>
+            <li>Colors are rendered exactly as they appear on the mainframe.</li>
+        </ul>
+    </section>
+
+    <hr>
+
+    <section id="exporting">
+        <h2>7. Exporting to the Mainframe</h2>
+        <p>When your design is complete, press <strong>F7</strong> to export. The resulting <code>.panel</code> file uses clean, standard syntax:</p>
+        <ul>
+            <li><code>)ATTR</code>: Dynamic attribute definitions.</li>
+            <li><code>)BODY</code>: Clean panel layout.</li>
+            <li><code>)INIT</code>: Automatic <code>.ZVARS</code> mapping based on F6 configurations.</li>
+            <li><code>)PROC</code> / <code>)END</code>: Standard sections for integration.</li>
+        </ul>
+    </section>
+
+    <hr>
+
+    <section id="tips">
+        <h2>8. Professional Tips</h2>
+        <ul>
+            <li><strong>Legacy Migration</strong>: Load existing <code>.panel</code> files with F3; the designer will automatically attempt to reconstruct field properties from <code>.ZVARS</code>.</li>
+            <li><strong>Keyboard Navigation</strong>: Use <strong>Backspace</strong> and <strong>Delete</strong> for quick character manipulation; the editor automatically handles buffer updates.</li>
+            <li><strong>Linux Usage</strong>: For the best experience on Linux, ensure your terminal supports UTF-8 and 256-color output.</li>
+        </ul>
+    </section>
+
+    <hr>
+
+    <div class="alert no-print">
+        <div class="alert-title">💡 Pro Tip</div>
+        <p>To generate the official PDF for your release, simply press <strong>Ctrl+P</strong> (or Cmd+P) in your browser and select <strong>"Save as PDF"</strong>. The layout is already optimized for standard A4/Letter printing.</p>
+    </div>
+
+</body>
+</html>
