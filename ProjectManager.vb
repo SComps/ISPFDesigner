@@ -10,25 +10,34 @@ Namespace ISPFDesigner
         ''' Saves the project state to a custom text-based format (.ispfd).
         ''' </summary>
         Public Shared Sub SaveProject(filename As String, model As ProjectModel)
-            Using writer As New StreamWriter(filename, False, Encoding.UTF8)
-                writer.WriteLine($"VER|{CURRENT_VERSION}")
-                writer.WriteLine($"SIZE|{model.Rows}|{model.Cols}")
-                
-                ' Save Attributes
-                For Each kvp In model.Attributes
-                    writer.WriteLine($"ATTR|{kvp.Key}|{kvp.Value}")
-                Next
-                
-                ' Save Field Properties
-                For Each fp In model.FieldProperties
-                    writer.WriteLine($"FIELD|{fp.Row}|{fp.Col}|{fp.Name}|{fp.Length}|{fp.Type}")
-                Next
-                
-                ' Save Body
-                For Each line In model.Buffer
-                    writer.WriteLine($"BODY|{line}")
-                Next
-            End Using
+            Dim allBytes As New List(Of Byte)()
+            Dim encoding As New UTF8Encoding(False) ' No BOM
+            Dim crlf As Byte() = {13, 10}
+
+            Dim AddLine As Action(Of String) = Sub(text)
+                allBytes.AddRange(encoding.GetBytes(text))
+                allBytes.AddRange(crlf)
+            End Sub
+
+            AddLine($"VER|{CURRENT_VERSION}")
+            AddLine($"SIZE|{model.Rows}|{model.Cols}")
+            
+            ' Save Attributes
+            For Each kvp In model.Attributes
+                AddLine($"ATTR|{kvp.Key}|{kvp.Value}")
+            Next
+            
+            ' Save Field Properties
+            For Each fp In model.FieldProperties
+                AddLine($"FIELD|{fp.Row}|{fp.Col}|{fp.Name}|{fp.Length}|{fp.Type}")
+            Next
+            
+            ' Save Body
+            For Each line In model.Buffer
+                AddLine($"BODY|{line}")
+            Next
+
+            File.WriteAllBytes(filename, allBytes.ToArray())
         End Sub
 
         ''' <summary>
