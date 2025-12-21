@@ -4,18 +4,14 @@ Namespace ISPFDesigner
     Public Class PanelWriter
         Public Shared Sub WriteToFile(filename As String, buffer(,) As Char, rows As Integer, cols As Integer, attrManager As AttributeManager, fieldProperties As Dictionary(Of (Integer, Integer), FieldProperty))
             Using writer As New StreamWriter(filename)
-                ' Ensure CRLF line endings regardless of OS
+                ' Ensure CRLF line endings regardless of OS - this fixes the "one long line" issue 
+                ' for transfer tools that expect DOS-style endings.
                 writer.NewLine = vbCrLf
                 
-                ' Helper to write a line padded to exactly 'cols'
-                Dim WritePaddedLine = Sub(text As String)
-                                         writer.WriteLine(text.PadRight(cols))
-                                     End Sub
-
                 ' 1. Write Attributes
-                WritePaddedLine(")ATTR")
+                writer.WriteLine(")ATTR")
                 For Each kvp In attrManager.GetAttributeDefinitions()
-                    WritePaddedLine($"  {kvp.Key} {kvp.Value}")
+                    writer.WriteLine($"  {kvp.Key} {kvp.Value}")
                 Next
                 
                 ' 2. Scan Body and collect Variable Meta
@@ -70,28 +66,28 @@ Namespace ISPFDesigner
                             lineBuilder.Append(ch)
                         End If
                     Next
-                    bodyLines(r) = lineBuilder.ToString() ' Already exactly 'cols' long
+                    bodyLines(r) = lineBuilder.ToString().TrimEnd()
                 Next
                 
                 ' 3. Write Body
-                WritePaddedLine(")BODY")
+                writer.WriteLine(")BODY")
                 For Each bLine In bodyLines
-                    WritePaddedLine(bLine)
+                    writer.WriteLine(bLine)
                 Next
                 
                 ' 4. Write INIT (.ZVARS)
-                WritePaddedLine(")INIT")
+                writer.WriteLine(")INIT")
                 If zVarNames.Count > 0 Then
-                    WritePaddedLine($"  .ZVARS = '({String.Join(" ", zVarNames)})'")
+                    writer.WriteLine($"  .ZVARS = '({String.Join(" ", zVarNames)})'")
                 End If
                 
                 ' 5. Write PROC
-                WritePaddedLine(")PROC")
+                writer.WriteLine(")PROC")
                 For Each stmt In procStatements
-                    WritePaddedLine(stmt)
+                    writer.WriteLine(stmt)
                 Next
                 
-                WritePaddedLine(")END")
+                writer.WriteLine(")END")
             End Using
         End Sub
     End Class
